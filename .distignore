@@ -1,0 +1,17 @@
+.git
+.github
+node_modules
+tests
+vendor
+.eslintrc.json
+.prettierignore
+.stylelintrc.json
+composer.json
+composer.lock
+package.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
+phpcs.xml.dist
+phpunit.xml.dist
+scripts
+wordpress-org-assets

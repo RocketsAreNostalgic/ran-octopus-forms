@@ -73,11 +73,6 @@ final class HealthCheck {
 		$contact_id = Settings::get_contact_page_id();
 		$success_id = absint( Settings::get( 'success_page_id' ) );
 
-		if ( 0 === $success_id ) {
-			$success = get_page_by_path( trim( Settings::SUCCESS_PATH, '/' ), OBJECT, 'page' );
-			$success_id = $success instanceof \WP_Post ? (int) $success->ID : 0;
-		}
-
 		return array(
 			self::post_status_check( __( 'Contact page', 'ran-octopus-forms' ), $contact_id ),
 			self::post_status_check( __( 'Success page', 'ran-octopus-forms' ), $success_id ),
@@ -111,6 +106,7 @@ final class HealthCheck {
 
 		return array(
 			self::status( 1 === $count ? 'pass' : 'error', __( 'Contact page form count', 'ran-octopus-forms' ), __( 'Contact page contains one Jetpack contact form.', 'ran-octopus-forms' ), sprintf( __( 'Contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one form so submissions cannot be attributed to the wrong integration.', 'ran-octopus-forms' ), $count ) ),
+			self::status( Settings::has_target_contact_form() ? 'pass' : 'error', __( 'RAN form marker', 'ran-octopus-forms' ), __( 'The Jetpack form is marked for RAN Octopus Forms.', 'ran-octopus-forms' ), __( 'The intended form is not marked for RAN Octopus Forms. Reinsert the Contact Newsletter Form pattern or add its RAN class to the one intended Jetpack form.', 'ran-octopus-forms' ) ),
 			self::status( false !== strpos( $content, 'jetpack/field-email' ) ? 'pass' : 'error', __( 'Email field', 'ran-octopus-forms' ), __( 'Contact form includes an email field.', 'ran-octopus-forms' ), __( 'Contact form is missing an email field.', 'ran-octopus-forms' ) ),
 			self::check_email_source_mapping(),
 			self::check_newsletter_source_mapping(),

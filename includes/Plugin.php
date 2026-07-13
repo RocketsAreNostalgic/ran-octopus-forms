@@ -21,7 +21,7 @@ final class Plugin {
 	 * @return void
 	 */
 	public static function activate() {
-		Settings::migrate_legacy_settings();
+		Settings::upgrade();
 	}
 
 	/**

@@ -1,6 +1,6 @@
 {
 	"name": "ran-octopus-forms",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"private": true,
 	"description": "WordPress contact-form integrations for Jetpack Forms, EmailOctopus, and Cloudflare Turnstile.",
 	"author": "bnjmnrsh",
@@ -29,7 +29,11 @@
 		"lint:js": "wp-scripts lint-js",
 		"lint:css": "wp-scripts lint-style",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
-		"check": "wp-scripts lint-pkg-json && wp-scripts lint-js && wp-scripts lint-style && prettier --check \"**/*.{css,md}\""
+		"check": "wp-scripts lint-pkg-json && wp-scripts lint-js && wp-scripts lint-style && prettier --check \"**/*.{css,md,txt}\"",
+		"make-pot": "wp i18n make-pot . languages/ran-octopus-forms.pot --domain=ran-octopus-forms --exclude=node_modules,tests",
+		"lint:php": "composer run phpcs",
+		"test:php": "composer run test",
+		"release": "sh scripts/build-release.sh"
 	},
 	"prettier": "@wordpress/prettier-config",
 	"packageManager": "pnpm@11.5.2"

@@ -16,14 +16,58 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class JetpackForms {
 	/**
+	 * Whether the current block render is the marked RAN form.
+	 *
+	 * Jetpack's AJAX filter does not provide a form ID. Restricting the value to
+	 * the server-side block-render window keeps other Jetpack forms on the same
+	 * page independent.
+	 *
+	 * @var bool
+	 */
+	private static $rendering_target_form = false;
+
+	/**
 	 * Register hooks.
 	 *
 	 * @return void
 	 */
 	public static function register() {
+		add_filter( 'pre_render_block', array( __CLASS__, 'before_render_block' ), 10, 2 );
+		add_filter( 'render_block', array( __CLASS__, 'after_render_block' ), 10, 2 );
 		add_filter( 'jetpack_forms_enable_ajax_submission', array( __CLASS__, 'disable_ajax_for_contact_form' ) );
+		add_filter( 'jetpack_contact_form_html', array( __CLASS__, 'mark_target_form_submission' ) );
 		add_filter( 'grunion_contact_form_redirect_url', array( __CLASS__, 'redirect_contact_form' ), 10, 3 );
 		add_action( 'grunion_after_message_sent', array( __CLASS__, 'subscribe_newsletter_opt_in' ), 10, 7 );
+	}
+
+	/**
+	 * Enter the marked form's server-side block-render context.
+	 *
+	 * @param string|null         $pre_render Existing pre-rendered content.
+	 * @param array<string,mixed> $parsed_block Parsed block data.
+	 * @return string|null
+	 */
+	public static function before_render_block( $pre_render, $parsed_block ) {
+		if ( ! is_admin() && is_page( Settings::get_contact_page_id() ) && Settings::is_target_contact_form_block( $parsed_block ) ) {
+			self::$rendering_target_form = true;
+		}
+
+		return $pre_render;
+	}
+
+	/**
+	 * Leave the marked form's server-side block-render context.
+	 *
+	 * @param string              $block_content Rendered block content.
+	 * @param array<string,mixed> $parsed_block Parsed block data.
+	 * @return string
+	 */
+	public static function after_render_block( $block_content, $parsed_block ) {
+		if ( Settings::is_target_contact_form_block( $parsed_block ) ) {
+			self::$rendering_target_form = false;
+		}
+
+		return $block_content;
 	}
 
 	/**
@@ -36,15 +80,67 @@ final class JetpackForms {
 	 * @return bool
 	 */
 	public static function disable_ajax_for_contact_form( $enabled ) {
-		if ( is_page( Settings::get_contact_page_id() ) || is_page( Settings::get_contact_page_slug() ) ) {
-			return false;
-		}
-
-		if ( Settings::is_contact_form_id( Settings::get_submitted_form_id() ) ) {
+		if ( self::$rendering_target_form || self::is_target_submission() ) {
 			return false;
 		}
 
 		return $enabled;
+	}
+
+	/**
+	 * Add a marker nonce to the one Jetpack form owned by this plugin.
+	 *
+	 * The marker allows submission hooks to distinguish the RAN form from other
+	 * Jetpack forms that may share the same page or form-ID prefix.
+	 *
+	 * @param string $form_html Rendered Jetpack form HTML.
+	 * @return string
+	 */
+	public static function mark_target_form_submission( $form_html ) {
+		if ( ! self::is_target_form_html( $form_html ) ) {
+			return $form_html;
+		}
+
+		$marker = sprintf(
+			'<input type="hidden" name="ran_octopus_forms_target" value="%s" />',
+			esc_attr( wp_create_nonce( self::get_target_nonce_action() ) )
+		);
+
+		return str_replace( '</form>', $marker . '</form>', $form_html );
+	}
+
+	/**
+	 * Whether rendered form markup belongs to this plugin's marked form.
+	 *
+	 * @param string $form_html Rendered Jetpack form HTML.
+	 * @return bool
+	 */
+	public static function is_target_form_html( $form_html ) {
+		return Settings::has_single_contact_form() && false !== strpos( $form_html, Settings::TARGET_FORM_CLASS );
+	}
+
+	/**
+	 * Whether the request is a submission from the marked RAN form.
+	 *
+	 * @return bool
+	 */
+	public static function is_target_submission() {
+		if ( ! Settings::has_single_contact_form() || ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) || ! isset( $_POST['ran_octopus_forms_target'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verification occurs below.
+			return false;
+		}
+
+		$nonce = sanitize_text_field( wp_unslash( $_POST['ran_octopus_forms_target'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- this is the nonce being verified.
+
+		return (bool) wp_verify_nonce( $nonce, self::get_target_nonce_action() );
+	}
+
+	/**
+	 * Get the nonce action used exclusively for the configured form.
+	 *
+	 * @return string
+	 */
+	private static function get_target_nonce_action() {
+		return 'ran_octopus_forms_target_' . Settings::get_contact_page_id();
 	}
 
 	/**
@@ -58,11 +154,13 @@ final class JetpackForms {
 	public static function redirect_contact_form( $redirect, $id, $post_id ) {
 		unset( $post_id );
 
-		if ( ! Settings::is_contact_form_id( $id ) || ! Settings::has_single_contact_form() ) {
+		if ( ! Settings::is_contact_form_id( $id ) || ! self::is_target_submission() ) {
 			return $redirect;
 		}
 
-		return Settings::get_success_url();
+		$success_url = Settings::get_success_url();
+
+		return '' !== $success_url ? $success_url : $redirect;
 	}
 
 	/**
@@ -84,8 +182,7 @@ final class JetpackForms {
 			return;
 		}
 
-		if ( ! Settings::has_single_contact_form() ) {
-			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'ambiguous_contact_form' );
+		if ( ! self::is_target_submission() ) {
 			return;
 		}
 

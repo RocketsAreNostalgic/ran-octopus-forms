@@ -258,6 +258,9 @@ final class Admin {
 				<fieldset class="postbox ran-octopus-forms-fieldset">
 					<legend class="hndle"><span><?php esc_html_e( 'EmailOctopus', 'ran-octopus-forms' ); ?></span></legend>
 					<div class="inside">
+						<?php if ( '' === EmailOctopusApi::get_api_key() ) : ?>
+							<p class="notice notice-info inline"><span><?php esc_html_e( 'EmailOctopus is optional and is currently disabled. Add an EmailOctopus API key and select a destination to enable opt-in subscriptions.', 'ran-octopus-forms' ); ?></span></p>
+						<?php endif; ?>
 						<div class="ran-octopus-forms-field">
 							<label for="ran-octopus-forms-emailoctopus-destination"><?php esc_html_e( 'EmailOctopus destination', 'ran-octopus-forms' ); ?></label>
 							<?php self::emailoctopus_destination_dropdown( $forms, (string) $settings['emailoctopus_form_id'], (string) $settings['emailoctopus_list_id'] ); ?>
@@ -280,6 +283,9 @@ final class Admin {
 				<fieldset class="postbox ran-octopus-forms-fieldset">
 					<legend class="hndle"><span><?php esc_html_e( 'Turnstile', 'ran-octopus-forms' ); ?></span></legend>
 					<div class="inside">
+						<?php if ( ! Settings::can_use_turnstile() ) : ?>
+							<p class="notice notice-info inline"><span><?php esc_html_e( 'Cloudflare Turnstile is optional and is currently disabled. Enable it and provide valid keys to add verification to the marked RAN form.', 'ran-octopus-forms' ); ?></span></p>
+						<?php endif; ?>
 						<div class="ran-octopus-forms-field">
 							<span class="ran-octopus-forms-field-label"><?php esc_html_e( 'Protection', 'ran-octopus-forms' ); ?></span>
 							<label>
@@ -368,7 +374,7 @@ final class Admin {
 				'name'              => Settings::OPTION_NAME . '[' . $key . ']',
 				'id'                => $id,
 				'selected'          => $selected,
-				'show_option_none'  => __( 'Use default', 'ran-octopus-forms' ),
+					'show_option_none'  => __( 'Not configured', 'ran-octopus-forms' ),
 				'option_none_value' => 0,
 			)
 		);

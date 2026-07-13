@@ -51,7 +51,7 @@ final class Turnstile {
 	 * @return string
 	 */
 	public static function append_widget( $form_html ) {
-		if ( ! self::should_render_on_current_page() || false !== strpos( $form_html, 'cf-turnstile' ) ) {
+		if ( ! self::should_render_on_current_page() || ! JetpackForms::is_target_form_html( $form_html ) || false !== strpos( $form_html, 'cf-turnstile' ) ) {
 			return $form_html;
 		}
 
@@ -85,12 +85,8 @@ final class Turnstile {
 			return $is_spam;
 		}
 
-		if ( ! Settings::is_turnstile_enabled() || ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) ) {
+		if ( ! Settings::is_turnstile_enabled() || ! JetpackForms::is_target_submission() ) {
 			return $is_spam;
-		}
-
-		if ( ! Settings::has_single_contact_form() ) {
-			return new \WP_Error( 'ran_octopus_forms_ambiguous_contact_form', __( 'Contact form configuration is ambiguous. Please contact the site administrator.', 'ran-octopus-forms' ) );
 		}
 
 		if ( ! Settings::can_use_turnstile() ) {
