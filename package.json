@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"description": "WordPress contact-form integrations for Jetpack Forms, EmailOctopus, and Cloudflare Turnstile.",
-	"author": "RAN",
+	"author": "bnjmnrsh",
 	"license": "GPL-2.0-or-later",
 	"keywords": [
 		"wordpress",
@@ -18,7 +18,7 @@
 		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms.git"
 	},
 	"bugs": {
-		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms/issues"
+		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms"
 	},
 	"devDependencies": {
 		"@wordpress/scripts": "^30.25.0"
