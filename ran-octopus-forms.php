@@ -1,0 +1,37 @@
+<?php
+/**
+ * Plugin Name: RAN Octopus Forms
+ * Plugin URI: https://github.com/RocketsAreNostalgic/ran-octopus-forms
+ * Description: Site-owned contact form integrations for WordPress sites.
+ * Version: 0.1.0
+ * Author: bnjmnrsh
+ * Author URI: https://github.com/RocketsAreNostalgic/
+ * Text Domain: ran-octopus-forms
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+ *
+ * @package RAN_Octopus_Forms
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+define( 'RAN_OCTOPUS_FORMS_VERSION', '0.1.0' );
+define( 'RAN_OCTOPUS_FORMS_PLUGIN_FILE', __FILE__ );
+define( 'RAN_OCTOPUS_FORMS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Settings.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusApi.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusFieldMapper.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusSubscriber.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Turnstile.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Patterns.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/JetpackForms.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/HealthCheck.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Admin.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Plugin.php';
+
+register_activation_hook( __FILE__, array( '\\RAN\\OctopusForms\\Plugin', 'activate' ) );
+
+\RAN\OctopusForms\Plugin::register();

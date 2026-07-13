@@ -1,0 +1,36 @@
+{
+	"name": "ran-octopus-forms",
+	"version": "0.1.0",
+	"private": true,
+	"description": "WordPress contact-form integrations for Jetpack Forms, EmailOctopus, and Cloudflare Turnstile.",
+	"author": "RAN",
+	"license": "GPL-2.0-or-later",
+	"keywords": [
+		"wordpress",
+		"forms",
+		"jetpack",
+		"emailoctopus",
+		"turnstile"
+	],
+	"homepage": "https://protestsandsuffragettes.com/",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms.git"
+	},
+	"bugs": {
+		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms/issues"
+	},
+	"devDependencies": {
+		"@wordpress/scripts": "^30.25.0"
+	},
+	"scripts": {
+		"format": "wp-scripts format && prettier --write \"**/*.{css,md}\"",
+		"format:check": "wp-scripts lint-js && prettier --check \"**/*.{css,md}\"",
+		"lint:js": "wp-scripts lint-js",
+		"lint:css": "wp-scripts lint-style",
+		"lint:pkg-json": "wp-scripts lint-pkg-json",
+		"check": "wp-scripts lint-pkg-json && wp-scripts lint-js && wp-scripts lint-style && prettier --check \"**/*.{css,md}\""
+	},
+	"prettier": "@wordpress/prettier-config",
+	"packageManager": "pnpm@11.5.2"
+}

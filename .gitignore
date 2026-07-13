@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+*.log
+coverage/
+.phpunit.result.cache
+node_modules/
+vendor/
+test-results/
+playwright-report/
