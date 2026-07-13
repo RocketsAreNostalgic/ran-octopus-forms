@@ -1,0 +1,77 @@
+# Pre-release checklist
+
+Use this as the final outstanding-work list before publishing RAN Octopus Forms
+to WordPress.org. The plugin already has release guidance in `RELEASE.md`; this
+file separates the remaining publish blockers from the normal release steps.
+
+## Publish blockers
+
+- [ ] Finish the WordPress.org asset-directory migration currently visible in
+      the worktree: the old `wordpress-org-assets/` files are deleted and the
+      replacement files now live under `wordpress-org/assets/`.
+- [ ] Review and commit the current `RELEASE.md` change so the release handoff
+      matches the new `wordpress-org/assets/` layout.
+- [ ] Confirm the WordPress.org plugin slug `ran-octopus-forms`, contributor
+      account, support ownership, and public repository links are final.
+- [ ] Confirm the banner and icon files in `wordpress-org/assets/` are
+      licence-cleared, project-owned, and approved for public directory use.
+- [ ] Create the screenshots referenced by `readme.txt` and place them in
+      `wordpress-org/assets/`:
+      `screenshot-1.png` for settings/integration status and `screenshot-2.png`
+      for the Contact Newsletter Form pattern.
+- [ ] Review `readme.txt` against the current WordPress.org readme validator,
+      including tags, Jetpack/EmailOctopus/Cloudflare external-service
+      disclosures, stable tag `1.0.0`, screenshots, and the declared
+      `Tested up to` value.
+- [ ] Run the full local release gate from a clean worktree:
+
+      ```sh
+      pnpm install --frozen-lockfile
+      composer install
+      pnpm check
+      pnpm make-pot
+      composer run phpcs
+      WP_TESTS_DIR=/path/to/wordpress-tests-lib composer test
+      pnpm release
+      ```
+
+- [ ] Run Plugin Check against the unpacked release ZIP, matching the
+      `.github/workflows/quality.yml` release job.
+- [ ] Install the generated ZIP into a fresh WordPress site with Jetpack active
+      and verify activation, settings save, pattern insertion, single-form
+      marker behaviour, success redirect, normal Jetpack submission behaviour,
+      and upgrade handling for zero/one/multiple form cases.
+- [ ] Verify EmailOctopus opt-in mapping and Cloudflare Turnstile behaviour with
+      real or sandbox provider credentials before making the public service
+      claims final.
+- [ ] Confirm the release ZIP is built only from `release-contents.txt` and does
+      not include development-only files or WordPress.org directory assets.
+- [ ] Copy the validated release contents to WordPress.org SVN `trunk`, tag
+      `1.0.0`, and upload only approved directory artwork/screenshots to
+      `/assets`.
+
+## Translation readiness
+
+- [ ] Confirm all user-facing PHP strings are wrapped in the appropriate
+      WordPress i18n function with the `ran-octopus-forms` text domain.
+      Serialized pattern labels must be translated before insertion into the
+      pattern content.
+- [ ] Run the WordPress i18n coding-standard sniff:
+      `composer run phpcs -- --sniffs=WordPress.WP.I18n`.
+- [ ] Regenerate `languages/ran-octopus-forms.pot` with `pnpm make-pot` after
+      all final user-facing copy changes.
+- [ ] Confirm the POT file has no stale source references and is committed with
+      the release.
+- [ ] Do not bundle `.po` or `.mo` files unless they are reviewed,
+      release-ready translations. WordPress.org translations should normally be
+      handled through translate.wordpress.org after approval.
+- [ ] Treat launch translations as optional. Only add `.po` and `.mo` files if
+      a fluent reviewer has approved them and there is a specific release reason
+      to ship them before WordPress.org language packs exist.
+
+## Nice-to-have before first public launch
+
+- [ ] Capture a short manual QA note covering disabled-provider, EmailOctopus
+      enabled, Turnstile enabled, and both providers enabled states.
+- [ ] Confirm the admin health/status wording is clear enough for a site owner
+      without developer support.

@@ -15,5 +15,5 @@ GitHub is the development source. Before a manual directory submission:
 6. Confirm `readme.txt` stable tag, main plugin header version and SVN tag are
    all `1.0.0`; do not submit until they agree.
 
-The repository's `wordpress-org-assets/` folder is intentionally separate from
+The repository's `wordpress-org/assets/` folder is intentionally separate from
 the release ZIP, matching the WordPress.org SVN layout.
