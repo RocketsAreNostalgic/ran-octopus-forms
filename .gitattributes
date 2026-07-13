@@ -16,4 +16,5 @@
 /pnpm-lock.yaml export-ignore
 /pnpm-workspace.yaml export-ignore
 /scripts export-ignore
+/tests export-ignore
 /wordpress-org-assets export-ignore

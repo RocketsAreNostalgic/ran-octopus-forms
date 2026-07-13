@@ -14,4 +14,5 @@ pnpm-workspace.yaml
 phpcs.xml.dist
 phpunit.xml.dist
 scripts
+tests/wp-tests-config.php.template
 wordpress-org-assets

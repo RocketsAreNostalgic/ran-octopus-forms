@@ -1,56 +1,54 @@
 # RAN Octopus Forms
 
-RAN Octopus Forms is a site-owned WordPress integration for Jetpack contact
-forms, EmailOctopus newsletter opt-ins, success redirects, and optional
-Cloudflare Turnstile verification.
-
-## Features
-
-- Registers the **Contact Newsletter Form** pattern in the `PNS Layouts`
-  category.
-- Redirects a configured Jetpack contact form to a configured success page.
-- Adds opted-in subscribers to an EmailOctopus list, with configurable field
-  mapping.
-- Supports Cloudflare Turnstile and blocks its always-pass test keys in
-  production.
-- Provides a read-only configuration health check.
+RAN Octopus Forms adds an explicit contact-form integration layer to one
+administrator-selected [Jetpack Forms](https://jetpack.com/support/jetpack-forms/)
+block. It is portable: no theme, site path, page slug, or hard-coded provider
+credential is assumed.
 
 ## Requirements
 
-- WordPress with Jetpack Forms available.
-- The EmailOctopus plugin, when newsletter opt-ins should create subscribers.
-- Cloudflare Turnstile site and secret keys, when Turnstile is enabled.
+- WordPress 6.5 or later.
+- PHP 8.0 or later.
+- Jetpack, which supplies the required contact-form block.
 
-## Installation
+EmailOctopus and Cloudflare Turnstile are optional. Until an administrator
+configures them, no EmailOctopus request or Turnstile script is made.
 
-1. Install the plugin in `wp-content/plugins/ran-octopus-forms`.
-2. Activate **RAN Octopus Forms** in WordPress administration.
-3. Open **Settings > RAN Octopus Forms** and configure the contact and success
-   pages.
-4. Configure EmailOctopus and, if required, Turnstile before publishing the
-   contact form.
+## Installation and use
 
-On first activation, the plugin copies saved `ran_forms_settings` into
-`ran_octopus_forms_settings`. The legacy setting remains as a rollback
-safeguard, and legacy constants continue to work until environment bootstrap
-code is updated.
+1. Install and activate Jetpack, then activate RAN Octopus Forms.
+2. Choose the contact and success pages in **Settings > RAN Octopus Forms**.
+3. Insert **Contact Newsletter Form** from the plugin-owned **RAN Forms**
+   pattern category on the chosen contact page.
+4. Configure EmailOctopus only if opted-in subscribers should be sent to a
+   selected destination. Configure Turnstile only if verification is required.
 
-## Usage
+The supplied pattern adds the `ran-octopus-forms-contact-form` marker. Redirects,
+opt-in subscriptions, Turnstile, and normal-post handling apply only to that
+single marked Jetpack form. Other Jetpack forms on the page and in template
+parts are unaffected.
 
-Insert the **Contact Newsletter Form** pattern on the configured contact page.
-It provides required name and email fields, a message field, and a newsletter
-opt-in checkbox. The plugin targets the configured page rather than a reusable
-form post ID, so exactly one Jetpack contact form must exist on that page.
+### Existing sites
 
-Select an EmailOctopus form for normal use: the plugin resolves its connected
-list automatically. A direct list override is available only when a form is
-not the intended destination. Newsletter opt-ins are sent through the
-EmailOctopus list contacts API; custom list fields require explicit mappings in
-**Settings > RAN Octopus Forms > EmailOctopus field mapping**.
+The 1.0.0 upgrade preserves existing page IDs. Once, it marks the configured
+page's form only when it finds exactly one Jetpack form. When the page has zero
+or multiple forms, it makes no content change; an administrator must select or
+reinsert the intended pattern. New installations have no default contact or
+success route.
 
-For local Turnstile testing, the settings page exposes Cloudflare's documented
-always-pass and always-fail test pairs. WordPress's `production` environment
-never renders or accepts the always-pass pair.
+## Privacy and external services
+
+The plugin has no bundled third-party code. See [THIRD-PARTY.md](THIRD-PARTY.md)
+for the service and licence inventory.
+
+- Jetpack Forms is a required local plugin dependency.
+- EmailOctopus receives an opted-in email address and only deliberately mapped
+  fields after an administrator configures an API key and destination.
+- Optional Cloudflare Turnstile loads Cloudflare's public script and validates
+  its response token server-side; the visitor IP is sent when available.
+
+Site administrators are responsible for provider accounts, legal notices, and
+consent before enabling external services.
 
 ## Development
 
@@ -58,48 +56,28 @@ Run commands from this plugin directory:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm format:check
+composer install
+pnpm make-pot
 pnpm check
-php -l ran-octopus-forms.php
+composer run phpcs
+WP_TESTS_DIR=/path/to/wordpress-tests-lib composer test
+pnpm release
 ```
 
-The shared WordPress configuration lives in `.eslintrc.json`,
-`.stylelintrc.json`, `.prettierignore`, and `package.json`. PHP follows the
-WordPress coding style; lint each changed PHP file before release.
+`pnpm release` creates a clean ZIP from the explicit
+[release allowlist](release-contents.txt), verifies its archive integrity, and
+never overwrites an existing archive. The GitHub workflow checks PHP 8.0 and
+the current supported PHP combination, translation freshness, PHPCS, PHPUnit,
+Plugin Check, and release archive contents.
 
-## Extensibility and compatibility
+## WordPress.org preparation
 
-The plugin provides these filters:
-
-```php
-ran_octopus_forms_contact_page_slug
-ran_octopus_forms_emailoctopus_form_id
-ran_octopus_forms_emailoctopus_list_id
-ran_octopus_forms_contact_success_url
-ran_octopus_forms_environment_type
-```
-
-The settings health check verifies Jetpack Forms, EmailOctopus read-only API
-access, page/form shape, redirect hooks, Turnstile configuration, and frontend
-rendering without sending mail, creating feedback posts, or adding contacts.
-
-RAN Octopus Forms owns the modern contact/newsletter path. It does not own
-legacy hosted EmailOctopus embeds retained in site content.
-
-## Accessibility and security
-
-The starter pattern uses explicit required fields and an opt-in checkbox.
-Subscription occurs only for an opted-in submission. Keep API and Turnstile
-secrets in WordPress configuration or environment-specific bootstrap code;
-never expose them in public markup or logs.
+The public directory readme is [readme.txt](readme.txt). GitHub remains the
+development source; [RELEASE.md](RELEASE.md) documents the manual SVN
+`trunk`, `tags/1.0.0`, and separate `/assets` handoff. Do not submit before the
+final directory slug, contributor account, trademarks, and third-party terms
+are confirmed.
 
 ## License
 
-RAN Octopus Forms is licensed under the [GNU General Public License v2.0 or
-later](LICENSE) (`GPL-2.0-or-later`).
-
-## Support and contributing
-
-Report reproducible issues at
-[RocketsAreNostalgic/ran-octopus-forms](https://github.com/RocketsAreNostalgic/ran-octopus-forms/issues).
-Contributions should include relevant lint and health-check evidence.
+RAN Octopus Forms is licensed under [GPL-2.0-or-later](LICENSE).

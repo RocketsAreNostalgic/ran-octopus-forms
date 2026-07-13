@@ -1,6 +1,6 @@
 {
 	"extends": "@wordpress/stylelint-config",
-	"ignoreFiles": [ "build/**/*", "node_modules/**/*", "vendor/**/*" ],
+	"ignoreFiles": ["build/**/*", "node_modules/**/*", "vendor/**/*"],
 	"rules": {
 		"at-rule-empty-line-before": null,
 		"comment-empty-line-before": null,

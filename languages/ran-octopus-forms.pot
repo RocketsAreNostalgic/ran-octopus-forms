@@ -1,0 +1,813 @@
+# Copyright (C) 2026 bnjmnrsh
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: RAN Octopus Forms 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/ran-octopus-forms\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-07-13T11:56:11+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: ran-octopus-forms\n"
+
+#. Plugin Name of the plugin
+#: ran-octopus-forms.php
+#: includes/Admin.php:49
+#: includes/Admin.php:50
+#: includes/Admin.php:232
+#: includes/HealthCheck.php:63
+msgid "RAN Octopus Forms"
+msgstr ""
+
+#. Plugin URI of the plugin
+#: ran-octopus-forms.php
+msgid "https://github.com/RocketsAreNostalgic/ran-octopus-forms"
+msgstr ""
+
+#. Description of the plugin
+#: ran-octopus-forms.php
+msgid "Site-owned contact form integrations for WordPress sites."
+msgstr ""
+
+#. Author of the plugin
+#: ran-octopus-forms.php
+msgid "bnjmnrsh"
+msgstr ""
+
+#. Author URI of the plugin
+#: ran-octopus-forms.php
+msgid "https://github.com/RocketsAreNostalgic/"
+msgstr ""
+
+#: includes/Admin.php:84
+msgid "Settings"
+msgstr ""
+
+#: includes/Admin.php:107
+msgid "RAN GitHub"
+msgstr ""
+
+#: includes/Admin.php:233
+msgid "Configure the site-owned contact form integration, newsletter opt-in, success redirect, and optional Cloudflare Turnstile protection."
+msgstr ""
+
+#: includes/Admin.php:235
+#: includes/HealthCheck.php:202
+#: includes/HealthCheck.php:207
+msgid "Turnstile validation"
+msgstr ""
+
+#: includes/Admin.php:236
+#: includes/Admin.php:238
+msgctxt "settings help link separator"
+msgid "|"
+msgstr ""
+
+#: includes/Admin.php:237
+msgid "Turnstile testing keys"
+msgstr ""
+
+#: includes/Admin.php:239
+msgid "EmailOctopus API documentation"
+msgstr ""
+
+#: includes/Admin.php:245
+msgid "Contact flow"
+msgstr ""
+
+#: includes/Admin.php:248
+#: includes/HealthCheck.php:77
+msgid "Contact page"
+msgstr ""
+
+#: includes/Admin.php:252
+#: includes/HealthCheck.php:78
+msgid "Success page"
+msgstr ""
+
+#: includes/Admin.php:259
+msgid "EmailOctopus"
+msgstr ""
+
+#: includes/Admin.php:262
+msgid "EmailOctopus is optional and is currently disabled. Add an EmailOctopus API key and select a destination to enable opt-in subscriptions."
+msgstr ""
+
+#: includes/Admin.php:265
+msgid "EmailOctopus destination"
+msgstr ""
+
+#: includes/Admin.php:269
+msgid "Email address source"
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/Admin.php:273
+#: includes/HealthCheck.php:379
+#: includes/HealthCheck.php:383
+#: includes/HealthCheck.php:386
+msgid "Newsletter opt-in source"
+msgstr ""
+
+#: includes/Admin.php:277
+msgid "Custom field mapping"
+msgstr ""
+
+#: includes/Admin.php:284
+#: includes/HealthCheck.php:180
+msgid "Turnstile"
+msgstr ""
+
+#: includes/Admin.php:287
+msgid "Cloudflare Turnstile is optional and is currently disabled. Enable it and provide valid keys to add verification to the marked RAN form."
+msgstr ""
+
+#: includes/Admin.php:290
+msgid "Protection"
+msgstr ""
+
+#: includes/Admin.php:293
+msgid "Enable Cloudflare Turnstile on the contact form"
+msgstr ""
+
+#: includes/Admin.php:297
+#: includes/HealthCheck.php:184
+msgid "Turnstile site key"
+msgstr ""
+
+#: includes/Admin.php:301
+#: includes/HealthCheck.php:185
+msgid "Turnstile secret key"
+msgstr ""
+
+#: includes/Admin.php:302
+msgid "Stored key hidden"
+msgstr ""
+
+#: includes/Admin.php:303
+msgid "Leave blank to keep the existing stored secret."
+msgstr ""
+
+#: includes/Admin.php:306
+msgid "Local testing"
+msgstr ""
+
+#: includes/Admin.php:311
+msgid "Save settings"
+msgstr ""
+
+#: includes/Admin.php:315
+msgid "Health check"
+msgstr ""
+
+#: includes/Admin.php:317
+msgid "Runs safe diagnostics without sending mail, creating feedback posts, or adding EmailOctopus contacts."
+msgstr ""
+
+#: includes/Admin.php:323
+#: includes/Admin.php:328
+#: includes/Admin.php:330
+msgid "Run health check"
+msgstr ""
+
+#: includes/Admin.php:327
+msgid "Turnstile test keys are configured while WordPress reports a production environment. The widget will not load until production keys are configured or the environment type is corrected."
+msgstr ""
+
+#: includes/Admin.php:347
+msgid "Sorry, you are not allowed to run this health check."
+msgstr ""
+
+#: includes/Admin.php:377
+msgid "Not configured"
+msgstr ""
+
+#: includes/Admin.php:398
+msgid "Destinations unavailable"
+msgstr ""
+
+#. translators: %s: EmailOctopus form ID.
+#: includes/Admin.php:403
+#, php-format
+msgid "Saved form ID: %s"
+msgstr ""
+
+#. translators: %s: EmailOctopus list ID.
+#: includes/Admin.php:407
+#, php-format
+msgid "Saved list ID: %s"
+msgstr ""
+
+#: includes/Admin.php:417
+msgid "Select an EmailOctopus destination"
+msgstr ""
+
+#: includes/Admin.php:419
+msgid "Forms"
+msgstr ""
+
+#: includes/Admin.php:441
+msgid "Direct list overrides"
+msgstr ""
+
+#: includes/Admin.php:468
+msgid "Choose the EmailOctopus form connected to the newsletter list. Use a direct list override only when a form is not the right source of truth."
+msgstr ""
+
+#: includes/Admin.php:470
+msgid "No EmailOctopus forms were returned for the configured API key."
+msgstr ""
+
+#. translators: %s: EmailOctopus form ID.
+#: includes/Admin.php:503
+#, php-format
+msgid "Saved form ID not returned by API: %s"
+msgstr ""
+
+#. translators: %s: EmailOctopus list ID.
+#: includes/Admin.php:508
+#, php-format
+msgid "Saved list ID not returned by API: %s"
+msgstr ""
+
+#. translators: %s: saved EmailOctopus destination identifier.
+#: includes/Admin.php:512
+#, php-format
+msgid "Saved destination not returned by API: %s"
+msgstr ""
+
+#: includes/Admin.php:522
+msgid "Untitled form"
+msgstr ""
+
+#: includes/Admin.php:523
+msgid "unknown type"
+msgstr ""
+
+#: includes/Admin.php:602
+#: includes/Admin.php:645
+msgid "No Jetpack fields detected"
+msgstr ""
+
+#: includes/Admin.php:604
+msgid "Add a Jetpack contact form to the configured contact page, then save settings to choose the opt-in checkbox."
+msgstr ""
+
+#. translators: %s: saved Jetpack field source key.
+#: includes/Admin.php:624
+#: includes/Admin.php:669
+#, php-format
+msgid "Saved source not detected: %s"
+msgstr ""
+
+#: includes/Admin.php:628
+msgid "Choose the checkbox field that means the submitter opted into the newsletter."
+msgstr ""
+
+#: includes/Admin.php:647
+msgid "Add a Jetpack contact form to the configured contact page, then save settings to choose the email source."
+msgstr ""
+
+#: includes/Admin.php:655
+msgid "Auto-detect email field"
+msgstr ""
+
+#: includes/Admin.php:673
+msgid "RAN Octopus Forms sends this value as EmailOctopus email_address. Auto-detect first tries the Jetpack email field, then any submitted field with email in its key."
+msgstr ""
+
+#: includes/Admin.php:685
+msgid "Localhost test keys"
+msgstr ""
+
+#: includes/Admin.php:687
+msgid "For local development, use Cloudflare test keys instead of production keys. These work on localhost and always pass validation."
+msgstr ""
+
+#: includes/Admin.php:690
+msgid "Set up local dev"
+msgstr ""
+
+#: includes/Admin.php:694
+msgid "Site key"
+msgstr ""
+
+#: includes/Admin.php:698
+msgid "Secret key"
+msgstr ""
+
+#: includes/Admin.php:701
+msgid "The setup button saves these always-pass keys and enables Turnstile. Do not use production keys on localhost unless the Cloudflare widget explicitly allows that hostname. RAN Octopus Forms blocks these test keys when WordPress reports a production environment."
+msgstr ""
+
+#: includes/Admin.php:703
+msgid "Failure test site key"
+msgstr ""
+
+#: includes/Admin.php:707
+msgid "Failure test secret key"
+msgstr ""
+
+#: includes/Admin.php:710
+msgid "Use the failure test pair only when intentionally testing Turnstile error handling, failed health checks, and retry messaging."
+msgstr ""
+
+#: includes/Admin.php:728
+msgid "Select an EmailOctopus destination, then save settings to map custom list fields."
+msgstr ""
+
+#: includes/Admin.php:749
+msgid "No Jetpack fields were detected on the configured contact page."
+msgstr ""
+
+#: includes/Admin.php:756
+msgid "Map custom EmailOctopus fields"
+msgstr ""
+
+#: includes/Admin.php:759
+msgid "The selected list does not expose custom fields beyond EmailAddress."
+msgstr ""
+
+#: includes/Admin.php:761
+msgid "Only mapped fields are sent to EmailOctopus. Leave fields set to Do not send unless the mapping is intentional."
+msgstr ""
+
+#: includes/Admin.php:765
+msgid "EmailOctopus field"
+msgstr ""
+
+#: includes/Admin.php:766
+msgid "Type"
+msgstr ""
+
+#: includes/Admin.php:767
+msgid "Jetpack source"
+msgstr ""
+
+#: includes/Admin.php:768
+msgid "Transform"
+msgstr ""
+
+#: includes/Admin.php:787
+msgid "Do not send"
+msgstr ""
+
+#. translators: %s: health-check status.
+#: includes/Admin.php:881
+#, php-format
+msgid "Latest result: %s"
+msgstr ""
+
+#: includes/Admin.php:885
+msgid "Check"
+msgstr ""
+
+#: includes/Admin.php:886
+msgid "Status"
+msgstr ""
+
+#: includes/Admin.php:887
+msgid "Detail"
+msgstr ""
+
+#: includes/Admin.php:894
+msgid "FAIL"
+msgstr ""
+
+#: includes/EmailOctopusApi.php:43
+#: includes/EmailOctopusApi.php:140
+#: includes/HealthCheck.php:62
+msgid "EmailOctopus API key is missing."
+msgstr ""
+
+#: includes/EmailOctopusApi.php:53
+msgid "EmailOctopus returned an unexpected forms response."
+msgstr ""
+
+#: includes/EmailOctopusApi.php:103
+msgid "EmailOctopus form ID is missing."
+msgstr ""
+
+#: includes/EmailOctopusApi.php:122
+msgid "EmailOctopus list ID is missing."
+msgstr ""
+
+#: includes/EmailOctopusApi.php:166
+msgid "EmailOctopus API returned an unexpected status."
+msgstr ""
+
+#: includes/EmailOctopusApi.php:172
+msgid "EmailOctopus API returned invalid JSON."
+msgstr ""
+
+#: includes/EmailOctopusFieldMapper.php:25
+msgid "No transform"
+msgstr ""
+
+#: includes/EmailOctopusFieldMapper.php:26
+msgid "Use first word only"
+msgstr ""
+
+#: includes/EmailOctopusFieldMapper.php:27
+msgid "Use everything after first word"
+msgstr ""
+
+#: includes/EmailOctopusFieldMapper.php:28
+msgid "Send lowercase"
+msgstr ""
+
+#: includes/EmailOctopusSubscriber.php:29
+msgid "A valid email address is required."
+msgstr ""
+
+#: includes/EmailOctopusSubscriber.php:36
+msgid "EmailOctopus credentials are unavailable."
+msgstr ""
+
+#: includes/EmailOctopusSubscriber.php:79
+msgid "EmailOctopus returned an unexpected response."
+msgstr ""
+
+#: includes/HealthCheck.php:61
+msgid "Jetpack Forms"
+msgstr ""
+
+#: includes/HealthCheck.php:61
+msgid "Jetpack Forms class is available."
+msgstr ""
+
+#: includes/HealthCheck.php:61
+msgid "Jetpack Forms is not available."
+msgstr ""
+
+#: includes/HealthCheck.php:62
+#: includes/HealthCheck.php:130
+msgid "EmailOctopus API key"
+msgstr ""
+
+#: includes/HealthCheck.php:62
+msgid "EmailOctopus API key is available."
+msgstr ""
+
+#: includes/HealthCheck.php:63
+msgid "RAN Octopus Forms is loaded."
+msgstr ""
+
+#: includes/HealthCheck.php:63
+msgid "RAN Octopus Forms is not loaded."
+msgstr ""
+
+#: includes/HealthCheck.php:93
+msgid "Contact form pattern"
+msgstr ""
+
+#: includes/HealthCheck.php:93
+msgid "Pattern is registered."
+msgstr ""
+
+#: includes/HealthCheck.php:93
+msgid "Pattern is not registered."
+msgstr ""
+
+#: includes/HealthCheck.php:94
+msgid "Pattern fields"
+msgstr ""
+
+#: includes/HealthCheck.php:94
+msgid "Pattern includes email and newsletter fields."
+msgstr ""
+
+#: includes/HealthCheck.php:94
+msgid "Pattern is missing expected fields."
+msgstr ""
+
+#. translators: %d: number of Jetpack contact forms found.
+#: includes/HealthCheck.php:107
+#, php-format
+msgid "Contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one form so submissions cannot be attributed to the wrong integration."
+msgstr ""
+
+#: includes/HealthCheck.php:110
+msgid "Contact page form count"
+msgstr ""
+
+#: includes/HealthCheck.php:110
+msgid "Contact page contains one Jetpack contact form."
+msgstr ""
+
+#: includes/HealthCheck.php:111
+msgid "RAN form marker"
+msgstr ""
+
+#: includes/HealthCheck.php:111
+msgid "The Jetpack form is marked for RAN Octopus Forms."
+msgstr ""
+
+#: includes/HealthCheck.php:111
+msgid "The intended form is not marked for RAN Octopus Forms. Reinsert the Contact Newsletter Form pattern or add its RAN class to the one intended Jetpack form."
+msgstr ""
+
+#: includes/HealthCheck.php:112
+msgid "Email field"
+msgstr ""
+
+#: includes/HealthCheck.php:112
+msgid "Contact form includes an email field."
+msgstr ""
+
+#: includes/HealthCheck.php:112
+msgid "Contact form is missing an email field."
+msgstr ""
+
+#: includes/HealthCheck.php:115
+msgid "Redirect hook"
+msgstr ""
+
+#: includes/HealthCheck.php:115
+msgid "Contact form redirect hook is registered."
+msgstr ""
+
+#: includes/HealthCheck.php:115
+msgid "Contact form redirect hook is missing."
+msgstr ""
+
+#: includes/HealthCheck.php:130
+msgid "API key is present."
+msgstr ""
+
+#: includes/HealthCheck.php:130
+msgid "API key is missing."
+msgstr ""
+
+#: includes/HealthCheck.php:133
+#: includes/HealthCheck.php:153
+msgid "EmailOctopus form/list"
+msgstr ""
+
+#: includes/HealthCheck.php:133
+msgid "Cannot check form or list without an API key."
+msgstr ""
+
+#: includes/HealthCheck.php:138
+#: includes/HealthCheck.php:143
+#: includes/HealthCheck.php:147
+msgid "EmailOctopus form"
+msgstr ""
+
+#: includes/HealthCheck.php:138
+msgid "Direct list override is selected."
+msgstr ""
+
+#: includes/HealthCheck.php:147
+msgid "Selected form resolves through the API."
+msgstr ""
+
+#: includes/HealthCheck.php:153
+msgid "Select an EmailOctopus form or direct list override."
+msgstr ""
+
+#: includes/HealthCheck.php:157
+#: includes/HealthCheck.php:163
+msgid "EmailOctopus list"
+msgstr ""
+
+#: includes/HealthCheck.php:157
+msgid "Could not resolve a list ID."
+msgstr ""
+
+#: includes/HealthCheck.php:163
+msgid "Configured list resolves through the API."
+msgstr ""
+
+#: includes/HealthCheck.php:180
+msgid "Turnstile is disabled."
+msgstr ""
+
+#: includes/HealthCheck.php:184
+msgid "Site key is present."
+msgstr ""
+
+#: includes/HealthCheck.php:184
+msgid "Site key is missing."
+msgstr ""
+
+#: includes/HealthCheck.php:185
+msgid "Secret key is present."
+msgstr ""
+
+#: includes/HealthCheck.php:185
+msgid "Secret key is missing."
+msgstr ""
+
+#: includes/HealthCheck.php:193
+msgid "Turnstile environment safety"
+msgstr ""
+
+#: includes/HealthCheck.php:193
+msgid "Cloudflare test keys are blocked when WordPress reports a production environment."
+msgstr ""
+
+#: includes/HealthCheck.php:202
+msgid "No Turnstile token was submitted. Run the health check from this settings page after the widget loads."
+msgstr ""
+
+#: includes/HealthCheck.php:207
+msgid "Configured site key and secret validated successfully."
+msgstr ""
+
+#: includes/HealthCheck.php:221
+#: includes/HealthCheck.php:227
+msgid "Frontend render"
+msgstr ""
+
+#: includes/HealthCheck.php:221
+msgid "Contact page URL is unavailable."
+msgstr ""
+
+#: includes/HealthCheck.php:233
+msgid "Contact page response"
+msgstr ""
+
+#: includes/HealthCheck.php:233
+msgid "Contact page returns HTTP 200."
+msgstr ""
+
+#: includes/HealthCheck.php:233
+msgid "Contact page did not return HTTP 200."
+msgstr ""
+
+#: includes/HealthCheck.php:234
+msgid "Rendered Jetpack form"
+msgstr ""
+
+#: includes/HealthCheck.php:234
+msgid "Rendered page includes the Jetpack form."
+msgstr ""
+
+#: includes/HealthCheck.php:234
+msgid "Rendered page is missing the Jetpack form."
+msgstr ""
+
+#: includes/HealthCheck.php:235
+msgid "EmailOctopus embed removed"
+msgstr ""
+
+#: includes/HealthCheck.php:235
+msgid "Rendered contact page does not include an EmailOctopus embed."
+msgstr ""
+
+#: includes/HealthCheck.php:235
+msgid "Rendered contact page still includes an EmailOctopus embed."
+msgstr ""
+
+#: includes/HealthCheck.php:236
+msgid "Rendered Turnstile"
+msgstr ""
+
+#: includes/HealthCheck.php:236
+msgid "Rendered Turnstile state matches settings."
+msgstr ""
+
+#: includes/HealthCheck.php:236
+msgid "Turnstile is enabled but the widget was not rendered."
+msgstr ""
+
+#: includes/HealthCheck.php:280
+msgid "Page does not exist."
+msgstr ""
+
+#. translators: %s: WordPress post status.
+#: includes/HealthCheck.php:284
+#, php-format
+msgid "Page status: %s."
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/HealthCheck.php:342
+#: includes/HealthCheck.php:354
+#: includes/HealthCheck.php:358
+#: includes/HealthCheck.php:361
+msgid "Email source mapping"
+msgstr ""
+
+#: includes/HealthCheck.php:342
+msgid "Email source is set to auto-detect."
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/HealthCheck.php:354
+#, php-format
+msgid "Configured email source \"%s\" does not look like an email field."
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/HealthCheck.php:358
+#, php-format
+msgid "Email source maps to \"%s\"."
+msgstr ""
+
+#: includes/HealthCheck.php:361
+msgid "Configured email source was not detected on the contact form."
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/HealthCheck.php:379
+#, php-format
+msgid "Configured newsletter source \"%s\" is not a checkbox field."
+msgstr ""
+
+#. translators: %s: selected Jetpack contact-form field label.
+#: includes/HealthCheck.php:383
+#, php-format
+msgid "Newsletter opt-in maps to \"%s\"."
+msgstr ""
+
+#: includes/HealthCheck.php:386
+msgid "Configured newsletter source was not detected on the contact form."
+msgstr ""
+
+#. translators: %d: number of mapped EmailOctopus custom fields.
+#: includes/HealthCheck.php:422
+#: includes/HealthCheck.php:427
+#: includes/HealthCheck.php:433
+#: includes/HealthCheck.php:446
+msgid "EmailOctopus field mapping"
+msgstr ""
+
+#: includes/HealthCheck.php:422
+msgid "Selected list does not expose custom fields beyond the email address field that RAN Octopus Forms submits."
+msgstr ""
+
+#. translators: %d: number of mapped EmailOctopus custom fields.
+#: includes/HealthCheck.php:427
+#, php-format
+msgid "All %d EmailOctopus custom field(s) are mapped to detected Jetpack fields."
+msgstr ""
+
+#. translators: 1: number of mapped fields, 2: number of invalid fields, 3: comma-separated example field names.
+#: includes/HealthCheck.php:436
+#, php-format
+msgid "%1$d custom field(s) are mapped, but %2$d mapping(s) point to Jetpack fields that were not detected on the configured contact form: %3$s."
+msgstr ""
+
+#. translators: 1: number of mapped fields, 2: number of custom fields, 3: comma-separated example field names.
+#: includes/HealthCheck.php:449
+#, php-format
+msgid "%1$d of %2$d EmailOctopus custom field(s) are mapped. Only mapped fields and email_address are submitted; unmapped fields include: %3$s."
+msgstr ""
+
+#: includes/Patterns.php:51
+msgid "RAN Forms"
+msgstr ""
+
+#: includes/Patterns.php:62
+msgid "Contact Newsletter Form"
+msgstr ""
+
+#: includes/Patterns.php:63
+msgid "Jetpack contact form with name, email, message, and newsletter opt-in checkbox."
+msgstr ""
+
+#: includes/Patterns.php:78
+msgid "Name"
+msgstr ""
+
+#: includes/Patterns.php:79
+msgid "Email"
+msgstr ""
+
+#: includes/Patterns.php:80
+msgid "Message"
+msgstr ""
+
+#: includes/Patterns.php:81
+msgid "Join our newsletter!"
+msgstr ""
+
+#: includes/Patterns.php:82
+msgid "Add label..."
+msgstr ""
+
+#: includes/Patterns.php:83
+msgid "Contact us"
+msgstr ""
+
+#: includes/Turnstile.php:93
+msgid "Verification is not configured correctly. Please contact the site administrator."
+msgstr ""
+
+#: includes/Turnstile.php:117
+msgid "Verification is required. Please try again."
+msgstr ""
+
+#: includes/Turnstile.php:143
+msgid "Verification could not be completed. Please try again."
+msgstr ""
+
+#: includes/Turnstile.php:152
+msgid "Verification failed. Please try again."
+msgstr ""

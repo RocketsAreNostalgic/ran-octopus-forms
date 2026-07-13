@@ -371,10 +371,10 @@ final class Admin {
 	private static function page_dropdown( $key, $id, $selected ) {
 		wp_dropdown_pages(
 			array(
-				'name'              => Settings::OPTION_NAME . '[' . $key . ']',
-				'id'                => $id,
-				'selected'          => $selected,
-					'show_option_none'  => __( 'Not configured', 'ran-octopus-forms' ),
+				'name'              => esc_attr( Settings::OPTION_NAME . '[' . sanitize_key( $key ) . ']' ),
+				'id'                => esc_attr( $id ),
+				'selected'          => absint( $selected ),
+				'show_option_none'  => esc_html__( 'Not configured', 'ran-octopus-forms' ),
 				'option_none_value' => 0,
 			)
 		);
@@ -399,9 +399,11 @@ final class Admin {
 			</select>
 			<p class="description"><?php echo esc_html( $forms->get_error_message() ); ?></p>
 			<?php if ( '' !== $form_id ) : ?>
+				<?php /* translators: %s: EmailOctopus form ID. */ ?>
 				<p class="description"><?php echo esc_html( sprintf( __( 'Saved form ID: %s', 'ran-octopus-forms' ), $form_id ) ); ?></p>
 			<?php endif; ?>
 			<?php if ( '' !== $list_id ) : ?>
+				<?php /* translators: %s: EmailOctopus list ID. */ ?>
 				<p class="description"><?php echo esc_html( sprintf( __( 'Saved list ID: %s', 'ran-octopus-forms' ), $list_id ) ); ?></p>
 			<?php endif; ?>
 			<?php
@@ -497,13 +499,16 @@ final class Admin {
 	 */
 	private static function get_emailoctopus_saved_destination_label( $selected ) {
 		if ( 0 === strpos( $selected, 'form:' ) ) {
+			/* translators: %s: EmailOctopus form ID. */
 			return sprintf( __( 'Saved form ID not returned by API: %s', 'ran-octopus-forms' ), substr( $selected, 5 ) );
 		}
 
 		if ( 0 === strpos( $selected, 'list:' ) ) {
+			/* translators: %s: EmailOctopus list ID. */
 			return sprintf( __( 'Saved list ID not returned by API: %s', 'ran-octopus-forms' ), substr( $selected, 5 ) );
 		}
 
+		/* translators: %s: saved EmailOctopus destination identifier. */
 		return sprintf( __( 'Saved destination not returned by API: %s', 'ran-octopus-forms' ), $selected );
 	}
 
@@ -566,12 +571,12 @@ final class Admin {
 	/**
 	 * Get human readable EmailOctopus list label.
 	 *
-	 * @param array<string,string> $list List data.
+	 * @param array<string,string> $emailoctopus_list EmailOctopus list data.
 	 * @return string
 	 */
-	private static function get_emailoctopus_list_label( $list ) {
-		$list_id   = (string) ( $list['id'] ?? '' );
-		$list_name = (string) ( $list['name'] ?? '' );
+	private static function get_emailoctopus_list_label( $emailoctopus_list ) {
+		$list_id   = (string) ( $emailoctopus_list['id'] ?? '' );
+		$list_name = (string) ( $emailoctopus_list['name'] ?? '' );
 
 		if ( '' === $list_name ) {
 			return $list_id;
@@ -587,8 +592,8 @@ final class Admin {
 	 * @return void
 	 */
 	private static function newsletter_source_dropdown( $selected ) {
-		$source_fields   = EmailOctopusFieldMapper::get_source_fields();
-		$selected_found  = false;
+		$source_fields  = EmailOctopusFieldMapper::get_source_fields();
+		$selected_found = false;
 
 		if ( empty( $source_fields ) ) {
 			?>
@@ -605,7 +610,7 @@ final class Admin {
 		<select class="regular-text" id="ran-octopus-forms-newsletter-source" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[newsletter_source]">
 			<?php foreach ( $source_fields as $source_field ) : ?>
 				<?php
-				if ( $selected === ( $source_field['key'] ?? '' ) ) {
+				if ( ( $source_field['key'] ?? '' ) === $selected ) {
 					$selected_found = true;
 				}
 				?>
@@ -615,6 +620,7 @@ final class Admin {
 			<?php endforeach; ?>
 			<?php if ( '' !== $selected && ! $selected_found ) : ?>
 				<option value="<?php echo esc_attr( $selected ); ?>" selected>
+					<?php /* translators: %s: saved Jetpack field source key. */ ?>
 					<?php echo esc_html( sprintf( __( 'Saved source not detected: %s', 'ran-octopus-forms' ), $selected ) ); ?>
 				</option>
 			<?php endif; ?>
@@ -649,7 +655,7 @@ final class Admin {
 			<option value=""><?php esc_html_e( 'Auto-detect email field', 'ran-octopus-forms' ); ?></option>
 			<?php foreach ( $source_fields as $source_field ) : ?>
 				<?php
-				if ( $selected === ( $source_field['key'] ?? '' ) ) {
+				if ( ( $source_field['key'] ?? '' ) === $selected ) {
 					$selected_found = true;
 				}
 				?>
@@ -659,6 +665,7 @@ final class Admin {
 			<?php endforeach; ?>
 			<?php if ( '' !== $selected && ! $selected_found ) : ?>
 				<option value="<?php echo esc_attr( $selected ); ?>" selected>
+					<?php /* translators: %s: saved Jetpack field source key. */ ?>
 					<?php echo esc_html( sprintf( __( 'Saved source not detected: %s', 'ran-octopus-forms' ), $selected ) ); ?>
 				</option>
 			<?php endif; ?>
@@ -825,7 +832,7 @@ final class Admin {
 		}
 
 		foreach ( $forms as $form ) {
-			if ( $form_id === (string) ( $form['id'] ?? '' ) ) {
+			if ( (string) ( $form['id'] ?? '' ) === $form_id ) {
 				return sanitize_text_field( (string) ( $form['list_id'] ?? '' ) );
 			}
 		}
@@ -870,6 +877,7 @@ final class Admin {
 		}
 
 		?>
+		<?php /* translators: %s: health-check status. */ ?>
 		<h3><?php echo esc_html( sprintf( __( 'Latest result: %s', 'ran-octopus-forms' ), ucfirst( (string) $health['overall'] ) ) ); ?></h3>
 		<table class="widefat striped">
 			<thead>

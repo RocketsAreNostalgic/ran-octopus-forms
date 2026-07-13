@@ -103,9 +103,11 @@ final class HealthCheck {
 	private static function check_contact_form() {
 		$content = self::get_contact_form_content();
 		$count   = Settings::get_contact_form_count();
+		/* translators: %d: number of Jetpack contact forms found. */
+		$count_error = sprintf( __( 'Contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one form so submissions cannot be attributed to the wrong integration.', 'ran-octopus-forms' ), $count );
 
 		return array(
-			self::status( 1 === $count ? 'pass' : 'error', __( 'Contact page form count', 'ran-octopus-forms' ), __( 'Contact page contains one Jetpack contact form.', 'ran-octopus-forms' ), sprintf( __( 'Contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one form so submissions cannot be attributed to the wrong integration.', 'ran-octopus-forms' ), $count ) ),
+			self::status( 1 === $count ? 'pass' : 'error', __( 'Contact page form count', 'ran-octopus-forms' ), __( 'Contact page contains one Jetpack contact form.', 'ran-octopus-forms' ), $count_error ),
 			self::status( Settings::has_target_contact_form() ? 'pass' : 'error', __( 'RAN form marker', 'ran-octopus-forms' ), __( 'The Jetpack form is marked for RAN Octopus Forms.', 'ran-octopus-forms' ), __( 'The intended form is not marked for RAN Octopus Forms. Reinsert the Contact Newsletter Form pattern or add its RAN class to the one intended Jetpack form.', 'ran-octopus-forms' ) ),
 			self::status( false !== strpos( $content, 'jetpack/field-email' ) ? 'pass' : 'error', __( 'Email field', 'ran-octopus-forms' ), __( 'Contact form includes an email field.', 'ran-octopus-forms' ), __( 'Contact form is missing an email field.', 'ran-octopus-forms' ) ),
 			self::check_email_source_mapping(),
@@ -201,7 +203,7 @@ final class HealthCheck {
 			return $checks;
 		}
 
-		$result = Turnstile::verify_token( $turnstile_token );
+		$result   = Turnstile::verify_token( $turnstile_token );
 		$checks[] = self::row( is_wp_error( $result ) ? 'error' : 'pass', __( 'Turnstile validation', 'ran-octopus-forms' ), is_wp_error( $result ) ? $result->get_error_message() : __( 'Configured site key and secret validated successfully.', 'ran-octopus-forms' ) );
 
 		return $checks;
@@ -278,6 +280,7 @@ final class HealthCheck {
 			return self::row( 'error', $label, __( 'Page does not exist.', 'ran-octopus-forms' ) );
 		}
 
+		/* translators: %s: WordPress post status. */
 		return self::row( 'publish' === $post->post_status ? 'pass' : 'error', $label, sprintf( __( 'Page status: %s.', 'ran-octopus-forms' ), $post->post_status ) );
 	}
 
@@ -340,16 +343,18 @@ final class HealthCheck {
 		}
 
 		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
-			if ( $email_source !== ( $source_field['key'] ?? '' ) ) {
+			if ( ( $source_field['key'] ?? '' ) !== $email_source ) {
 				continue;
 			}
 
 			$looks_like_email = 'email' === ( $source_field['type'] ?? '' ) || false !== stripos( (string) ( $source_field['key'] ?? '' ), 'email' ) || false !== stripos( (string) ( $source_field['label'] ?? '' ), 'email' );
 
 			if ( ! $looks_like_email ) {
+				/* translators: %s: selected Jetpack contact-form field label. */
 				return self::row( 'error', __( 'Email source mapping', 'ran-octopus-forms' ), sprintf( __( 'Configured email source "%s" does not look like an email field.', 'ran-octopus-forms' ), $source_field['label'] ?? $email_source ) );
 			}
 
+			/* translators: %s: selected Jetpack contact-form field label. */
 			return self::row( 'pass', __( 'Email source mapping', 'ran-octopus-forms' ), sprintf( __( 'Email source maps to "%s".', 'ran-octopus-forms' ), $source_field['label'] ?? $email_source ) );
 		}
 
@@ -365,14 +370,16 @@ final class HealthCheck {
 		$newsletter_source = Settings::get_newsletter_source();
 
 		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
-			if ( $newsletter_source !== ( $source_field['key'] ?? '' ) ) {
+			if ( ( $source_field['key'] ?? '' ) !== $newsletter_source ) {
 				continue;
 			}
 
 			if ( ! in_array( (string) ( $source_field['type'] ?? '' ), array( 'checkbox', 'consent' ), true ) ) {
+				/* translators: %s: selected Jetpack contact-form field label. */
 				return self::row( 'error', __( 'Newsletter opt-in source', 'ran-octopus-forms' ), sprintf( __( 'Configured newsletter source "%s" is not a checkbox field.', 'ran-octopus-forms' ), $source_field['label'] ?? $newsletter_source ) );
 			}
 
+			/* translators: %s: selected Jetpack contact-form field label. */
 			return self::row( 'pass', __( 'Newsletter opt-in source', 'ran-octopus-forms' ), sprintf( __( 'Newsletter opt-in maps to "%s".', 'ran-octopus-forms' ), $source_field['label'] ?? $newsletter_source ) );
 		}
 
@@ -382,17 +389,17 @@ final class HealthCheck {
 	/**
 	 * Check whether the selected EmailOctopus list expects unmapped fields.
 	 *
-	 * @param array<string,mixed> $list EmailOctopus list response.
+	 * @param array<string,mixed> $emailoctopus_list EmailOctopus list response.
 	 * @return array<string,string>
 	 */
-	private static function check_emailoctopus_list_fields( $list ) {
-		$custom_fields = EmailOctopusFieldMapper::get_custom_fields( $list );
+	private static function check_emailoctopus_list_fields( $emailoctopus_list ) {
+		$custom_fields = EmailOctopusFieldMapper::get_custom_fields( $emailoctopus_list );
 		$field_map     = Settings::get_emailoctopus_field_map();
-		$source_fields  = EmailOctopusFieldMapper::get_source_fields();
-		$source_keys    = wp_list_pluck( $source_fields, 'key' );
-		$mapped_count   = 0;
-		$unmapped       = array();
-		$invalid        = array();
+		$source_fields = EmailOctopusFieldMapper::get_source_fields();
+		$source_keys   = wp_list_pluck( $source_fields, 'key' );
+		$mapped_count  = 0;
+		$unmapped      = array();
+		$invalid       = array();
 
 		foreach ( $custom_fields as $field ) {
 			$tag   = (string) ( $field['tag'] ?? '' );
@@ -416,6 +423,7 @@ final class HealthCheck {
 		}
 
 		if ( empty( $unmapped ) && empty( $invalid ) ) {
+			/* translators: %d: number of mapped EmailOctopus custom fields. */
 			return self::row( 'pass', __( 'EmailOctopus field mapping', 'ran-octopus-forms' ), sprintf( __( 'All %d EmailOctopus custom field(s) are mapped to detected Jetpack fields.', 'ran-octopus-forms' ), $mapped_count ) );
 		}
 
@@ -445,5 +453,4 @@ final class HealthCheck {
 			)
 		);
 	}
-
 }

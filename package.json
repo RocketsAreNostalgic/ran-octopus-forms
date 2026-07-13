@@ -12,7 +12,7 @@
 		"emailoctopus",
 		"turnstile"
 	],
-	"homepage": "https://protestsandsuffragettes.com/",
+	"homepage": "https://github.com/RocketsAreNostalgic/ran-octopus-forms",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms.git"
@@ -21,20 +21,40 @@
 		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms"
 	},
 	"devDependencies": {
-		"@wordpress/scripts": "^30.25.0"
+		"@wordpress/scripts": "^30.25.0",
+		"prettier": "^3.5.3",
+		"typescript": "~5.4.5"
 	},
 	"scripts": {
-		"format": "wp-scripts format && prettier --write \"**/*.{css,md}\"",
-		"format:check": "wp-scripts lint-js && prettier --check \"**/*.{css,md}\"",
-		"lint:js": "wp-scripts lint-js",
-		"lint:css": "wp-scripts lint-style",
+		"format": "prettier --write --ignore-path .prettierignore --ignore-unknown .",
+		"format:check": "prettier --check --ignore-path .prettierignore --ignore-unknown .",
+		"lint:js": "node scripts/lint-sources.mjs js",
+		"lint:css": "node scripts/lint-sources.mjs css",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
-		"check": "wp-scripts lint-pkg-json && wp-scripts lint-js && wp-scripts lint-style && prettier --check \"**/*.{css,md,txt}\"",
+		"check": "pnpm run lint:pkg-json && pnpm run lint:js && pnpm run lint:css && pnpm run format:check",
 		"make-pot": "wp i18n make-pot . languages/ran-octopus-forms.pot --domain=ran-octopus-forms --exclude=node_modules,tests",
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
 		"release": "sh scripts/build-release.sh"
 	},
-	"prettier": "@wordpress/prettier-config",
+	"prettier": {
+		"useTabs": true,
+		"tabWidth": 4,
+		"printWidth": 80,
+		"singleQuote": true,
+		"trailingComma": "es5",
+		"bracketSameLine": false,
+		"bracketSpacing": true,
+		"semi": true,
+		"arrowParens": "always",
+		"overrides": [
+			{
+				"files": "*.{css,sass,scss}",
+				"options": {
+					"singleQuote": false
+				}
+			}
+		]
+	},
 	"packageManager": "pnpm@11.5.2"
 }

@@ -9,15 +9,20 @@
 	<arg name="colors"/>
 	<arg value="sp"/>
 	<config name="minimum_supported_wp_version" value="6.5"/>
+	<config name="testVersion" value="8.0-"/>
 	<rule ref="WordPress-Extra"/>
 	<rule ref="WordPress.WP.I18n">
 		<properties>
-			<property name="text_domain" type="array" value="ran-octopus-forms"/>
+			<property name="text_domain" type="array">
+				<element value="ran-octopus-forms"/>
+			</property>
 		</properties>
 	</rule>
-	<rule ref="PHPCompatibility">
-		<properties>
-			<property name="testVersion" value="8.0-"/>
-		</properties>
+	<rule ref="PHPCompatibility"/>
+	<rule ref="WordPress.Files.FileName.NotHyphenatedLowercase">
+		<severity>0</severity>
+	</rule>
+	<rule ref="WordPress.Files.FileName.InvalidClassFileName">
+		<severity>0</severity>
 	</rule>
 </ruleset>

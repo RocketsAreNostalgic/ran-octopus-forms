@@ -106,7 +106,7 @@ final class Settings {
 	}
 
 	/**
-	 * Upgrade an existing RAN Forms installation without retaining PNS defaults.
+	 * Upgrade an existing RAN Forms installation without retaining site-specific defaults.
 	 *
 	 * New installations remain deliberately unconfigured. Existing settings get
 	 * explicit page IDs only when the former conventional pages still exist.
@@ -225,7 +225,7 @@ final class Settings {
 		$settings['turnstile_enabled']         = empty( $input['turnstile_enabled'] ) ? 0 : 1;
 		$settings['turnstile_site_key']        = sanitize_text_field( $input['turnstile_site_key'] ?? '' );
 
-		$secret_key = sanitize_text_field( $input['turnstile_secret_key'] ?? '' );
+		$secret_key                       = sanitize_text_field( $input['turnstile_secret_key'] ?? '' );
 		$settings['turnstile_secret_key'] = '' === $secret_key ? (string) ( $current['turnstile_secret_key'] ?? '' ) : $secret_key;
 
 		if ( ! empty( $input['turnstile_setup_local_dev'] ) ) {

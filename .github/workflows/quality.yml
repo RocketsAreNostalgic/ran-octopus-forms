@@ -1,0 +1,101 @@
+name: Quality
+
+on:
+    pull_request:
+    push:
+        branches:
+            - main
+
+permissions:
+    contents: read
+
+jobs:
+    lint-and-phpunit:
+        name: PHP ${{ matrix.php }} / WordPress ${{ matrix.wordpress }}
+        runs-on: ubuntu-latest
+        services:
+            mysql:
+                image: mysql:8.0
+                env:
+                    MYSQL_DATABASE: wordpress_test
+                    MYSQL_ROOT_PASSWORD: root
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=5
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - php: '8.0'
+                      wordpress: '6.5'
+                    - php: '8.3'
+                      wordpress: 'latest'
+        steps:
+            - uses: actions/checkout@v4
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: ${{ matrix.php }}
+                  coverage: none
+                  tools: wp-cli
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 11.5.2
+            - run: pnpm install --frozen-lockfile
+            - run: composer install --no-interaction --prefer-dist
+            - run: pnpm check
+            - run: find includes -name '*.php' -print0 | xargs -0 -n 1 php -l && php -l ran-octopus-forms.php
+            - run: composer run phpcs
+            - run: pnpm make-pot && git diff --exit-code -- languages/ran-octopus-forms.pot
+            - name: Install WordPress test suite
+              run: bash scripts/install-wp-tests.sh wordpress_test root root 127.0.0.1:3306 ${{ matrix.wordpress }}
+            - run: WP_TESTS_DIR=/tmp/wordpress-tests-lib composer test
+            - name: Install and activate the release ZIP in fresh WordPress
+              run: |
+                  sh scripts/build-release.sh /tmp/ran-octopus-forms-release
+                  fresh_root=/tmp/ran-octopus-forms-release-wordpress
+                  wp_version='${{ matrix.wordpress }}'
+                  if [ "$wp_version" = 'latest' ]; then
+                    wp core download --path="$fresh_root"
+                  else
+                    wp core download --path="$fresh_root" --version="$wp_version"
+                  fi
+                  wp config create --path="$fresh_root" --dbname=ran_octopus_forms_release --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --skip-check
+                  wp db create --path="$fresh_root"
+                  wp core install --path="$fresh_root" --url=http://localhost --title='RAN release test' --admin_user=admin --admin_password=release-test-password --admin_email=admin@example.test
+                  wp plugin install jetpack --path="$fresh_root" --activate
+                  wp plugin install /tmp/ran-octopus-forms-release/ran-octopus-forms-1.0.0.zip --path="$fresh_root" --activate
+                  wp plugin is-active ran-octopus-forms --path="$fresh_root"
+
+    plugin-check-and-release:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: pnpm
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 11.5.2
+            - run: pnpm install --frozen-lockfile
+            - run: pnpm release
+            - run: mkdir plugin-check-build && unzip -q dist/ran-octopus-forms-1.0.0.zip -d plugin-check-build
+            - uses: wordpress/plugin-check-action@v1
+              with:
+                  build-dir: ./plugin-check-build/ran-octopus-forms
+            - name: Verify release archive content
+              run: |
+                  unzip -t dist/ran-octopus-forms-1.0.0.zip
+                  unzip -Z1 dist/ran-octopus-forms-1.0.0.zip | grep -qx 'ran-octopus-forms/ran-octopus-forms.php'
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: ran-octopus-forms-1.0.0
+                  path: dist/ran-octopus-forms-1.0.0.zip

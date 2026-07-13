@@ -61,7 +61,7 @@ final class Patterns {
 			array(
 				'title'         => __( 'Contact Newsletter Form', 'ran-octopus-forms' ),
 				'description'   => __( 'Jetpack contact form with name, email, message, and newsletter opt-in checkbox.', 'ran-octopus-forms' ),
-					'categories'    => array( self::PATTERN_CATEGORY ),
+				'categories'    => array( self::PATTERN_CATEGORY ),
 				'keywords'      => array( 'contact', 'form', 'newsletter', 'emailoctopus' ),
 				'content'       => self::get_contact_form_content(),
 				'viewportWidth' => 720,
@@ -75,12 +75,12 @@ final class Patterns {
 	 * @return string
 	 */
 	public static function get_contact_form_content() {
-		$name_label       = wp_json_encode( __( 'Name', 'ran-octopus-forms' ) );
-		$email_label      = wp_json_encode( __( 'Email', 'ran-octopus-forms' ) );
-		$message_label    = wp_json_encode( __( 'Message', 'ran-octopus-forms' ) );
-		$newsletter_label = wp_json_encode( __( 'Join our newsletter!', 'ran-octopus-forms' ) );
+		$name_label        = wp_json_encode( __( 'Name', 'ran-octopus-forms' ) );
+		$email_label       = wp_json_encode( __( 'Email', 'ran-octopus-forms' ) );
+		$message_label     = wp_json_encode( __( 'Message', 'ran-octopus-forms' ) );
+		$newsletter_label  = wp_json_encode( __( 'Join our newsletter!', 'ran-octopus-forms' ) );
 		$label_placeholder = wp_json_encode( __( 'Add label...', 'ran-octopus-forms' ) );
-		$submit_label     = esc_html__( 'Contact us', 'ran-octopus-forms' );
+		$submit_label      = esc_html__( 'Contact us', 'ran-octopus-forms' );
 
 		return trim(
 			sprintf(

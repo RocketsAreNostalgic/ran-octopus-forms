@@ -116,7 +116,7 @@ final class JetpackForms {
 	 * @return bool
 	 */
 	public static function is_target_form_html( $form_html ) {
-		return Settings::has_single_contact_form() && false !== strpos( $form_html, Settings::TARGET_FORM_CLASS );
+		return Settings::has_single_contact_form() && ( self::$rendering_target_form || false !== strpos( $form_html, Settings::TARGET_FORM_CLASS ) );
 	}
 
 	/**

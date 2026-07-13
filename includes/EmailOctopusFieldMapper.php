@@ -35,7 +35,7 @@ final class EmailOctopusFieldMapper {
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_source_fields() {
-		$fields = array();
+		$fields  = array();
 		$content = self::get_contact_form_content();
 
 		if ( '' === $content ) {
@@ -52,11 +52,11 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Get custom EmailOctopus fields from a list response.
 	 *
-	 * @param array<string,mixed> $list EmailOctopus list response.
+	 * @param array<string,mixed> $emailoctopus_list EmailOctopus list response.
 	 * @return array<int,array<string,string>>
 	 */
-	public static function get_custom_fields( $list ) {
-		$fields = isset( $list['fields'] ) && is_array( $list['fields'] ) ? $list['fields'] : array();
+	public static function get_custom_fields( $emailoctopus_list ) {
+		$fields = isset( $emailoctopus_list['fields'] ) && is_array( $emailoctopus_list['fields'] ) ? $emailoctopus_list['fields'] : array();
 		$custom = array();
 
 		foreach ( $fields as $field ) {
