@@ -72,16 +72,20 @@ final class Settings {
 	 */
 	public static function get_defaults() {
 		return array(
-			'contact_page_id'           => 0,
-			'success_page_id'           => 0,
-			'emailoctopus_form_id'      => self::EMAILOCTOPUS_FORM_ID,
-			'emailoctopus_list_id'      => '',
-			'emailoctopus_email_source' => '',
-			'emailoctopus_field_map'    => array(),
-			'newsletter_source'         => self::NEWSLETTER_SOURCE,
-			'turnstile_enabled'         => 0,
-			'turnstile_site_key'        => '',
-			'turnstile_secret_key'      => '',
+			'contact_page_id'                 => 0,
+			'success_page_id'                 => 0,
+			'emailoctopus_form_id'            => self::EMAILOCTOPUS_FORM_ID,
+			'emailoctopus_list_id'            => '',
+			'emailoctopus_email_source'       => '',
+			'emailoctopus_field_map'          => array(),
+			'emailoctopus_pending_message'    => __( 'There’s one more step: please confirm your subscription using the email we’ve just sent you.', 'ran-octopus-forms' ),
+			'emailoctopus_subscribed_message' => __( 'You’re now subscribed to our newsletter.', 'ran-octopus-forms' ),
+			'emailoctopus_existing_message'   => __( 'This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier.', 'ran-octopus-forms' ),
+			'emailoctopus_failure_message'    => __( 'Your message has been sent, but we could not add you to the newsletter. Please try again later.', 'ran-octopus-forms' ),
+			'newsletter_source'               => self::NEWSLETTER_SOURCE,
+			'turnstile_enabled'               => 0,
+			'turnstile_site_key'              => '',
+			'turnstile_secret_key'            => '',
 		);
 	}
 
@@ -200,11 +204,31 @@ final class Settings {
 	 * @return array<string,mixed>
 	 */
 	public static function sanitize( $input ) {
-		$input    = is_array( $input ) ? $input : array();
-		$current  = self::get_all();
-		$settings = self::get_defaults();
+		$input           = is_array( $input ) ? $input : array();
+		$current         = self::get_all();
+		$settings        = self::get_defaults();
+		$contact_page_id = absint( $input['contact_page_id'] ?? 0 );
 
-		$settings['contact_page_id'] = absint( $input['contact_page_id'] ?? 0 );
+		if ( 0 < $contact_page_id ) {
+			$contact_form_count = self::get_contact_form_count_for_page( $contact_page_id );
+
+			if ( 1 !== $contact_form_count ) {
+				add_settings_error(
+					self::OPTION_NAME,
+					'ran_octopus_forms_invalid_contact_page',
+					sprintf(
+						/* translators: %d: number of Jetpack contact forms found. */
+						__( 'Cannot save settings: the selected contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one.', 'ran-octopus-forms' ),
+						$contact_form_count
+					),
+					'error'
+				);
+
+				return $current;
+			}
+		}
+
+		$settings['contact_page_id'] = $contact_page_id;
 		$settings['success_page_id'] = absint( $input['success_page_id'] ?? 0 );
 		if ( array_key_exists( 'emailoctopus_destination', $input ) ) {
 			$destination = sanitize_text_field( $input['emailoctopus_destination'] );
@@ -219,11 +243,15 @@ final class Settings {
 			$settings['emailoctopus_list_id'] = sanitize_text_field( $input['emailoctopus_list_id'] ?? '' );
 		}
 
-		$settings['emailoctopus_email_source'] = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['emailoctopus_email_source'] ?? '' ) );
-		$settings['emailoctopus_field_map']    = self::sanitize_emailoctopus_field_map( $input['emailoctopus_field_map'] ?? array() );
-		$settings['newsletter_source']         = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? self::NEWSLETTER_SOURCE ) );
-		$settings['turnstile_enabled']         = empty( $input['turnstile_enabled'] ) ? 0 : 1;
-		$settings['turnstile_site_key']        = sanitize_text_field( $input['turnstile_site_key'] ?? '' );
+		$settings['emailoctopus_email_source']       = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['emailoctopus_email_source'] ?? '' ) );
+		$settings['emailoctopus_field_map']          = self::sanitize_emailoctopus_field_map( $input['emailoctopus_field_map'] ?? array() );
+		$settings['emailoctopus_pending_message']    = sanitize_textarea_field( $input['emailoctopus_pending_message'] ?? $settings['emailoctopus_pending_message'] );
+		$settings['emailoctopus_subscribed_message'] = sanitize_textarea_field( $input['emailoctopus_subscribed_message'] ?? $settings['emailoctopus_subscribed_message'] );
+		$settings['emailoctopus_existing_message']   = sanitize_textarea_field( $input['emailoctopus_existing_message'] ?? $settings['emailoctopus_existing_message'] );
+		$settings['emailoctopus_failure_message']    = sanitize_textarea_field( $input['emailoctopus_failure_message'] ?? $settings['emailoctopus_failure_message'] );
+		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? self::NEWSLETTER_SOURCE ) );
+		$settings['turnstile_enabled']               = empty( $input['turnstile_enabled'] ) ? 0 : 1;
+		$settings['turnstile_site_key']              = sanitize_text_field( $input['turnstile_site_key'] ?? '' );
 
 		$secret_key                       = sanitize_text_field( $input['turnstile_secret_key'] ?? '' );
 		$settings['turnstile_secret_key'] = '' === $secret_key ? (string) ( $current['turnstile_secret_key'] ?? '' ) : $secret_key;
@@ -342,7 +370,17 @@ final class Settings {
 	 * @return int
 	 */
 	public static function get_contact_form_count() {
-		return self::count_contact_form_blocks( self::get_contact_form_blocks() );
+		return self::get_contact_form_count_for_page( self::get_contact_page_id() );
+	}
+
+	/**
+	 * Count Jetpack contact forms on a specific page.
+	 *
+	 * @param int $page_id Page ID.
+	 * @return int
+	 */
+	public static function get_contact_form_count_for_page( $page_id ) {
+		return self::count_contact_form_blocks( self::get_contact_form_blocks( $page_id ) );
 	}
 
 	/**
@@ -350,8 +388,12 @@ final class Settings {
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
-	private static function get_contact_form_blocks() {
-		$content = get_post_field( 'post_content', self::get_contact_page_id() );
+	private static function get_contact_form_blocks( $page_id = null ) {
+		if ( null === $page_id ) {
+			$page_id = self::get_contact_page_id();
+		}
+
+		$content = get_post_field( 'post_content', absint( $page_id ) );
 
 		return parse_blocks( is_string( $content ) ? $content : '' );
 	}
@@ -570,6 +612,24 @@ final class Settings {
 		 * @param string $source Normalized Jetpack source key. Empty means auto-detect.
 		 */
 		return (string) apply_filters( 'ran_octopus_forms_emailoctopus_email_source', $source );
+	}
+
+	/**
+	 * Get the configured visitor-facing newsletter outcome message.
+	 *
+	 * @param string $outcome EmailOctopus subscription outcome.
+	 * @return string
+	 */
+	public static function get_emailoctopus_outcome_message( $outcome ) {
+		$message_keys = array(
+			'pending'    => 'emailoctopus_pending_message',
+			'subscribed' => 'emailoctopus_subscribed_message',
+			'existing'   => 'emailoctopus_existing_message',
+			'failed'     => 'emailoctopus_failure_message',
+		);
+		$key          = $message_keys[ sanitize_key( $outcome ) ] ?? '';
+
+		return '' !== $key ? sanitize_textarea_field( (string) self::get( $key ) ) : '';
 	}
 
 	/**

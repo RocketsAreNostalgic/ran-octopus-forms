@@ -29,6 +29,7 @@ require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Settings.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusApi.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusFieldMapper.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/EmailOctopusSubscriber.php';
+require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/SubmissionMessages.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Turnstile.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/Patterns.php';
 require_once RAN_OCTOPUS_FORMS_PLUGIN_DIR . 'includes/JetpackForms.php';

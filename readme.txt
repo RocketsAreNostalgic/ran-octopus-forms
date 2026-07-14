@@ -29,6 +29,8 @@ remain disabled until the administrator configures them.
 4. Insert the Contact Newsletter Form pattern from the RAN Forms category on
    the contact page.
 5. Optionally add EmailOctopus credentials and destination, and Turnstile keys.
+6. Add [ran_octopus_forms_subscription_message] in a Shortcode block on the
+   configured success page to show the appropriate newsletter outcome message.
 
 == Frequently Asked Questions ==
 

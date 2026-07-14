@@ -256,6 +256,28 @@ final class Admin {
 				</fieldset>
 
 				<fieldset class="postbox ran-octopus-forms-fieldset">
+					<legend class="hndle"><span><?php esc_html_e( 'Newsletter outcome messages', 'ran-octopus-forms' ); ?></span></legend>
+					<div class="inside">
+						<p class="description"><?php esc_html_e( 'On the configured success page, add a Shortcode block and paste the shortcode below. The block displays the appropriate message only after a visitor has chosen the newsletter option.', 'ran-octopus-forms' ); ?></p>
+						<div class="ran-octopus-forms-field">
+							<label for="ran-octopus-forms-subscription-message-shortcode"><?php esc_html_e( 'Subscription message shortcode', 'ran-octopus-forms' ); ?></label>
+							<input class="large-text code" id="ran-octopus-forms-subscription-message-shortcode" type="text" value="<?php echo esc_attr( '[' . SubmissionMessages::SHORTCODE . ']' ); ?>" readonly="readonly" />
+							<p class="description"><?php esc_html_e( 'Copy and paste this into a Shortcode block on the selected success page.', 'ran-octopus-forms' ); ?></p>
+						</div>
+						<details class="ran-octopus-forms-details">
+							<summary><?php esc_html_e( 'Customize subscription messages', 'ran-octopus-forms' ); ?></summary>
+							<div class="inside">
+								<p class="description"><?php esc_html_e( 'These messages are shown to visitors according to the EmailOctopus subscription result.', 'ran-octopus-forms' ); ?></p>
+								<?php self::subscription_message_field( 'emailoctopus_pending_message', 'ran-octopus-forms-pending-message', __( 'Confirmation required', 'ran-octopus-forms' ), (string) $settings['emailoctopus_pending_message'] ); ?>
+								<?php self::subscription_message_field( 'emailoctopus_subscribed_message', 'ran-octopus-forms-subscribed-message', __( 'Subscription complete', 'ran-octopus-forms' ), (string) $settings['emailoctopus_subscribed_message'] ); ?>
+								<?php self::subscription_message_field( 'emailoctopus_existing_message', 'ran-octopus-forms-existing-message', __( 'Existing email address', 'ran-octopus-forms' ), (string) $settings['emailoctopus_existing_message'] ); ?>
+								<?php self::subscription_message_field( 'emailoctopus_failure_message', 'ran-octopus-forms-failure-message', __( 'Subscription problem', 'ran-octopus-forms' ), (string) $settings['emailoctopus_failure_message'] ); ?>
+							</div>
+						</details>
+					</div>
+				</fieldset>
+
+				<fieldset class="postbox ran-octopus-forms-fieldset">
 					<legend class="hndle"><span><?php esc_html_e( 'EmailOctopus', 'ran-octopus-forms' ); ?></span></legend>
 					<div class="inside">
 						<?php if ( '' === EmailOctopusApi::get_api_key() ) : ?>
@@ -378,6 +400,24 @@ final class Admin {
 				'option_none_value' => 0,
 			)
 		);
+	}
+
+	/**
+	 * Render one visitor-facing subscription message setting.
+	 *
+	 * @param string $key   Settings key.
+	 * @param string $id    Field ID.
+	 * @param string $label Field label.
+	 * @param string $value Field value.
+	 * @return void
+	 */
+	private static function subscription_message_field( $key, $id, $label, $value ) {
+		?>
+		<div class="ran-octopus-forms-field">
+			<label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $label ); ?></label>
+			<textarea class="large-text" id="<?php echo esc_attr( $id ); ?>" name="<?php echo esc_attr( Settings::OPTION_NAME . '[' . sanitize_key( $key ) . ']' ); ?>" rows="3"><?php echo esc_textarea( $value ); ?></textarea>
+		</div>
+		<?php
 	}
 
 	/**

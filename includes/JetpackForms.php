@@ -38,6 +38,7 @@ final class JetpackForms {
 		add_filter( 'jetpack_contact_form_html', array( __CLASS__, 'mark_target_form_submission' ) );
 		add_filter( 'grunion_contact_form_redirect_url', array( __CLASS__, 'redirect_contact_form' ), 10, 3 );
 		add_action( 'grunion_after_message_sent', array( __CLASS__, 'subscribe_newsletter_opt_in' ), 10, 7 );
+		SubmissionMessages::register();
 	}
 
 	/**
@@ -152,15 +153,17 @@ final class JetpackForms {
 	 * @return string
 	 */
 	public static function redirect_contact_form( $redirect, $id, $post_id ) {
-		unset( $post_id );
-
 		if ( ! Settings::is_contact_form_id( $id ) || ! self::is_target_submission() ) {
 			return $redirect;
 		}
 
 		$success_url = Settings::get_success_url();
 
-		return '' !== $success_url ? $success_url : $redirect;
+		if ( '' === $success_url ) {
+			return $redirect;
+		}
+
+		return SubmissionMessages::add_result_to_redirect( $success_url, $post_id );
 	}
 
 	/**
@@ -193,13 +196,14 @@ final class JetpackForms {
 		$email_address = EmailOctopusFieldMapper::get_email_address( $all_values );
 
 		if ( '' === $email_address ) {
-			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'missing_email' );
+			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'failed' );
 			return;
 		}
 
 		$result = ( new EmailOctopusSubscriber() )->subscribe( $email_address, $all_values );
 
 		if ( is_wp_error( $result ) ) {
+			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'failed' );
 			update_post_meta(
 				$post_id,
 				'_ran_emailoctopus_subscription_error',
@@ -211,7 +215,7 @@ final class JetpackForms {
 			return;
 		}
 
-		update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'subscribed' );
+		update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', sanitize_key( $result['outcome'] ?? 'failed' ) );
 	}
 
 	/**

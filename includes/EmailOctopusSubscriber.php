@@ -20,7 +20,7 @@ final class EmailOctopusSubscriber {
 	 *
 	 * @param string $email_address Email address.
 	 * @param array  $all_values    Submitted Jetpack values.
-	 * @return true|\WP_Error
+	 * @return array{outcome:string}|\WP_Error
 	 */
 	public function subscribe( $email_address, $all_values = array() ) {
 		$email_address = sanitize_email( $email_address );
@@ -66,12 +66,22 @@ final class EmailOctopusSubscriber {
 		$status_code = wp_remote_retrieve_response_code( $response );
 		$body        = json_decode( wp_remote_retrieve_body( $response ), true );
 
-		if ( 200 === $status_code ) {
-			return true;
+		if ( 200 === $status_code && is_array( $body ) ) {
+			$status = strtoupper( sanitize_text_field( (string) ( $body['status'] ?? '' ) ) );
+
+			if ( 'PENDING' === $status ) {
+				return array( 'outcome' => 'pending' );
+			}
+
+			if ( 'SUBSCRIBED' === $status ) {
+				return array( 'outcome' => 'subscribed' );
+			}
+
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_unknown_contact_status', __( 'EmailOctopus returned an unknown contact status.', 'ran-octopus-forms' ) );
 		}
 
 		if ( is_array( $body ) && 'MEMBER_EXISTS_WITH_EMAIL_ADDRESS' === ( $body['code'] ?? '' ) ) {
-			return true;
+			return array( 'outcome' => 'existing' );
 		}
 
 		return new \WP_Error(

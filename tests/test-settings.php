@@ -24,7 +24,8 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 		delete_option( Settings::OPTION_NAME );
 		delete_option( Settings::LEGACY_OPTION_NAME );
 		delete_option( Settings::VERSION_OPTION );
-		$_POST = array();
+		$GLOBALS['wp_settings_errors'] = array();
+		$_POST                         = array();
 	}
 
 	/**
@@ -96,6 +97,75 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 
 		$this->assertFalse( Settings::has_target_contact_form() );
 		$this->assertStringNotContainsString( Settings::TARGET_FORM_CLASS, (string) get_post_field( 'post_content', $page_id ) );
+	}
+
+	/**
+	 * Settings cannot be pointed at a page without a Jetpack contact form.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_rejects_contact_page_without_a_jetpack_form() {
+		$current_page_id          = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => Patterns::get_contact_form_content(),
+			)
+		);
+		$invalid_page_id          = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			)
+		);
+		$current                  = array_merge(
+			Settings::get_defaults(),
+			array(
+				'contact_page_id' => $current_page_id,
+			)
+		);
+		$input                    = $current;
+		$input['contact_page_id'] = $invalid_page_id;
+
+		update_option( Settings::OPTION_NAME, $current );
+
+		$this->assertSame( $current, Settings::sanitize( $input ) );
+		$this->assertSame( 'ran_octopus_forms_invalid_contact_page', get_settings_errors( Settings::OPTION_NAME )[0]['code'] );
+	}
+
+	/**
+	 * Settings cannot be pointed at a page with multiple Jetpack contact forms.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_rejects_contact_page_with_multiple_jetpack_forms() {
+		$current_page_id          = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => Patterns::get_contact_form_content(),
+			)
+		);
+		$invalid_page_id          = self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form --><!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form -->',
+			)
+		);
+		$current                  = array_merge(
+			Settings::get_defaults(),
+			array(
+				'contact_page_id' => $current_page_id,
+			)
+		);
+		$input                    = $current;
+		$input['contact_page_id'] = $invalid_page_id;
+
+		update_option( Settings::OPTION_NAME, $current );
+
+		$this->assertSame( $current, Settings::sanitize( $input ) );
+		$this->assertSame( 'ran_octopus_forms_invalid_contact_page', get_settings_errors( Settings::OPTION_NAME )[0]['code'] );
 	}
 
 	/**

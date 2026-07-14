@@ -22,6 +22,10 @@ configures them, no EmailOctopus request or Turnstile script is made.
    pattern category on the chosen contact page.
 4. Configure EmailOctopus only if opted-in subscribers should be sent to a
    selected destination. Configure Turnstile only if verification is required.
+5. Add `[ran_octopus_forms_subscription_message]` in a Shortcode block on the
+   chosen success page. The plugin passes a one-time result to that page and
+   shows the configured confirmation, subscription, existing-email, or problem
+   message.
 
 The supplied pattern adds the `ran-octopus-forms-contact-form` marker. Redirects,
 opt-in subscriptions, Turnstile, and normal-post handling apply only to that
