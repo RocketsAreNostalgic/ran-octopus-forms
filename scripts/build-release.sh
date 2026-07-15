@@ -3,10 +3,9 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-slug=ran-octopus-forms
-version=1.0.0
 output=${1:-"$root/dist"}
-archive="$output/$slug-$version.zip"
+slug=ran-octopus-forms
+archive=$(sh "$root/scripts/release-archive-path.sh" "$output")
 stage=$(mktemp -d)
 
 cleanup() {

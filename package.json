@@ -32,7 +32,7 @@
 		"lint:css": "node scripts/lint-sources.mjs css",
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"check": "pnpm run lint:pkg-json && pnpm run lint:js && pnpm run lint:css && pnpm run format:check",
-		"make-pot": "wp i18n make-pot . languages/ran-octopus-forms.pot --domain=ran-octopus-forms --exclude=node_modules,tests",
+		"make-pot": "node scripts/make-pot.mjs",
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
 		"release": "sh scripts/build-release.sh"

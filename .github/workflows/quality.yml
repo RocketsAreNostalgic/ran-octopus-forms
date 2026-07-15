@@ -71,7 +71,8 @@ jobs:
                   wp db create --path="$fresh_root"
                   wp core install --path="$fresh_root" --url=http://localhost --title='RAN release test' --admin_user=admin --admin_password=release-test-password --admin_email=admin@example.test
                   wp plugin install jetpack --path="$fresh_root" --activate
-                  wp plugin install /tmp/ran-octopus-forms-release/ran-octopus-forms-1.0.0.zip --path="$fresh_root" --activate
+                  archive=$(sh scripts/release-archive-path.sh /tmp/ran-octopus-forms-release)
+                  wp plugin install "$archive" --path="$fresh_root" --activate
                   wp plugin is-active ran-octopus-forms --path="$fresh_root"
 
     plugin-check-and-release:
@@ -87,15 +88,16 @@ jobs:
                   version: 11.5.2
             - run: pnpm install --frozen-lockfile
             - run: pnpm release
-            - run: mkdir plugin-check-build && unzip -q dist/ran-octopus-forms-1.0.0.zip -d plugin-check-build
+            - run: mkdir plugin-check-build && unzip -q "$(sh scripts/release-archive-path.sh)" -d plugin-check-build
             - uses: wordpress/plugin-check-action@v1
               with:
                   build-dir: ./plugin-check-build/ran-octopus-forms
             - name: Verify release archive content
               run: |
-                  unzip -t dist/ran-octopus-forms-1.0.0.zip
-                  unzip -Z1 dist/ran-octopus-forms-1.0.0.zip | grep -qx 'ran-octopus-forms/ran-octopus-forms.php'
+                  archive=$(sh scripts/release-archive-path.sh)
+                  unzip -t "$archive"
+                  unzip -Z1 "$archive" | grep -qx 'ran-octopus-forms/ran-octopus-forms.php'
             - uses: actions/upload-artifact@v4
               with:
-                  name: ran-octopus-forms-1.0.0
-                  path: dist/ran-octopus-forms-1.0.0.zip
+                  name: ran-octopus-forms-${{ github.sha }}
+                  path: dist/*.zip
