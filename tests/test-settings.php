@@ -39,6 +39,51 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A configured EmailOctopus destination warns about unresolved newsletter sources.
+	 *
+	 * @dataProvider unresolved_newsletter_source_provider
+	 *
+	 * @param string $newsletter_source Submitted newsletter source key.
+	 * @return void
+	 */
+	public function test_sanitize_warns_and_retains_an_unresolved_newsletter_source( $newsletter_source ) {
+		$contact_page_id = $this->create_contact_page_with_default_fields();
+		$settings        = Settings::sanitize( $this->get_configured_source_settings_input( $contact_page_id, $newsletter_source ) );
+		$errors          = get_settings_errors( Settings::OPTION_NAME );
+
+		$this->assertSame( $newsletter_source, $settings['newsletter_source'] );
+		$this->assertCount( 1, $errors );
+		$this->assertSame( 'ran_octopus_forms_invalid_newsletter_source', $errors[0]['code'] );
+		$this->assertSame( 'warning', $errors[0]['type'] );
+	}
+
+	/**
+	 * A configured destination with valid email and newsletter fields needs no source warning.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_accepts_a_valid_email_and_newsletter_source_pair() {
+		$contact_page_id = $this->create_contact_page_with_default_fields();
+		$settings        = Settings::sanitize( $this->get_configured_source_settings_input( $contact_page_id, 'join_our_newsletter' ) );
+
+		$this->assertSame( 'email', $settings['emailoctopus_email_source'] );
+		$this->assertSame( 'join_our_newsletter', $settings['newsletter_source'] );
+		$this->assertSame( array(), get_settings_errors( Settings::OPTION_NAME ) );
+	}
+
+	/**
+	 * Newsletter sources that do not identify the current checkbox field.
+	 *
+	 * @return array<string,array{string}>
+	 */
+	public function unresolved_newsletter_source_provider() {
+		return array(
+			'blank source' => array( '' ),
+			'stale source' => array( 'former_newsletter_opt_in' ),
+		);
+	}
+
+	/**
 	 * The starter pattern always identifies its one intended Jetpack form.
 	 *
 	 * @return void
@@ -224,5 +269,39 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'cf-turnstile', Turnstile::append_widget( $marked_html ) );
 		$this->assertSame( $other_html, Turnstile::append_widget( $other_html ) );
+	}
+
+	/**
+	 * Create a contact page with the plugin's valid email and newsletter fields.
+	 *
+	 * @return int
+	 */
+	private function create_contact_page_with_default_fields() {
+		return self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_content' => Patterns::get_contact_form_content(),
+			)
+		);
+	}
+
+	/**
+	 * Build valid destination settings with a caller-controlled newsletter source.
+	 *
+	 * @param int    $contact_page_id   Contact page ID.
+	 * @param string $newsletter_source Submitted newsletter source key.
+	 * @return array<string,mixed>
+	 */
+	private function get_configured_source_settings_input( $contact_page_id, $newsletter_source ) {
+		return array_merge(
+			Settings::get_defaults(),
+			array(
+				'contact_page_id'           => $contact_page_id,
+				'emailoctopus_destination'  => 'list:newsletter-list',
+				'emailoctopus_email_source' => 'email',
+				'newsletter_source'         => $newsletter_source,
+			)
+		);
 	}
 }

@@ -87,11 +87,14 @@ final class HealthCheck {
 	private static function check_pattern() {
 		$registered = \WP_Block_Patterns_Registry::get_instance()->is_registered( Patterns::CONTACT_FORM_PATTERN );
 		$content    = Patterns::get_contact_form_content();
-		$has_fields = false !== strpos( $content, 'jetpack/field-email' ) && false !== strpos( $content, 'jetpack/field-checkbox' );
+
+		$has_email_field      = false !== strpos( $content, 'jetpack/field-email' );
+		$has_newsletter_field = false !== strpos( $content, 'jetpack/field-checkbox' ) || false !== strpos( $content, 'jetpack/field-consent' );
+		$has_fields           = $has_email_field && $has_newsletter_field;
 
 		return array(
 			self::status( $registered ? 'pass' : 'error', __( 'Contact form pattern', 'ran-octopus-forms' ), __( 'Pattern is registered.', 'ran-octopus-forms' ), __( 'Pattern is not registered.', 'ran-octopus-forms' ) ),
-			self::status( $has_fields ? 'pass' : 'error', __( 'Pattern fields', 'ran-octopus-forms' ), __( 'Pattern includes email and newsletter fields.', 'ran-octopus-forms' ), __( 'Pattern is missing expected fields.', 'ran-octopus-forms' ) ),
+			self::status( $has_fields ? 'pass' : 'error', __( 'Pattern fields', 'ran-octopus-forms' ), __( 'Pattern includes email and newsletter fields.', 'ran-octopus-forms' ), __( 'Pattern is missing an email field or checkbox/consent field.', 'ran-octopus-forms' ) ),
 		);
 	}
 
@@ -339,7 +342,7 @@ final class HealthCheck {
 		$email_source = Settings::get_emailoctopus_email_source();
 
 		if ( '' === $email_source ) {
-			return self::row( 'pass', __( 'Email source mapping', 'ran-octopus-forms' ), __( 'Email source is set to auto-detect.', 'ran-octopus-forms' ) );
+			return self::row( 'error', __( 'Email source mapping', 'ran-octopus-forms' ), __( 'No email source is configured. Select a current email field in RAN Octopus Forms settings.', 'ran-octopus-forms' ) );
 		}
 
 		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
@@ -347,11 +350,11 @@ final class HealthCheck {
 				continue;
 			}
 
-			$looks_like_email = 'email' === ( $source_field['type'] ?? '' ) || false !== stripos( (string) ( $source_field['key'] ?? '' ), 'email' ) || false !== stripos( (string) ( $source_field['label'] ?? '' ), 'email' );
+			$looks_like_email = EmailOctopusFieldMapper::is_supported_email_source_field( $source_field );
 
 			if ( ! $looks_like_email ) {
 				/* translators: %s: selected Jetpack contact-form field label. */
-				return self::row( 'error', __( 'Email source mapping', 'ran-octopus-forms' ), sprintf( __( 'Configured email source "%s" does not look like an email field.', 'ran-octopus-forms' ), $source_field['label'] ?? $email_source ) );
+				return self::row( 'error', __( 'Email source mapping', 'ran-octopus-forms' ), sprintf( __( 'Configured email source "%s" is not an email field.', 'ran-octopus-forms' ), $source_field['label'] ?? $email_source ) );
 			}
 
 			/* translators: %s: selected Jetpack contact-form field label. */
@@ -369,14 +372,18 @@ final class HealthCheck {
 	private static function check_newsletter_source_mapping() {
 		$newsletter_source = Settings::get_newsletter_source();
 
+		if ( '' === $newsletter_source ) {
+			return self::row( 'error', __( 'Newsletter opt-in source', 'ran-octopus-forms' ), __( 'No newsletter opt-in source is configured. Select a current checkbox or consent field in RAN Octopus Forms settings.', 'ran-octopus-forms' ) );
+		}
+
 		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
 			if ( ( $source_field['key'] ?? '' ) !== $newsletter_source ) {
 				continue;
 			}
 
-			if ( ! in_array( (string) ( $source_field['type'] ?? '' ), array( 'checkbox', 'consent' ), true ) ) {
+			if ( ! EmailOctopusFieldMapper::is_supported_newsletter_source_field( $source_field ) ) {
 				/* translators: %s: selected Jetpack contact-form field label. */
-				return self::row( 'error', __( 'Newsletter opt-in source', 'ran-octopus-forms' ), sprintf( __( 'Configured newsletter source "%s" is not a checkbox field.', 'ran-octopus-forms' ), $source_field['label'] ?? $newsletter_source ) );
+				return self::row( 'error', __( 'Newsletter opt-in source', 'ran-octopus-forms' ), sprintf( __( 'Configured newsletter source "%s" is not a checkbox or consent field.', 'ran-octopus-forms' ), $source_field['label'] ?? $newsletter_source ) );
 			}
 
 			/* translators: %s: selected Jetpack contact-form field label. */

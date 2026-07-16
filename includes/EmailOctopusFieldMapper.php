@@ -16,6 +16,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class EmailOctopusFieldMapper {
 	/**
+	 * Jetpack field types that can represent a newsletter opt-in.
+	 *
+	 * @var array<int,string>
+	 */
+	const NEWSLETTER_SOURCE_FIELD_TYPES = array( 'checkbox', 'consent' );
+
+	/**
+	 * Jetpack field types that can supply EmailOctopus email_address.
+	 *
+	 * @var array<int,string>
+	 */
+	const EMAIL_SOURCE_FIELD_TYPES = array( 'email' );
+
+	/**
 	 * Get available transform options.
 	 *
 	 * @return array<string,string>
@@ -35,8 +49,18 @@ final class EmailOctopusFieldMapper {
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_source_fields() {
+		return self::get_source_fields_for_contact_page( Settings::get_contact_page_id() );
+	}
+
+	/**
+	 * Get Jetpack fields available on a contact page.
+	 *
+	 * @param int $contact_page_id Contact page ID.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_source_fields_for_contact_page( $contact_page_id ) {
 		$fields  = array();
-		$content = self::get_contact_form_content();
+		$content = self::get_contact_form_content( $contact_page_id );
 
 		if ( '' === $content ) {
 			return $fields;
@@ -47,6 +71,79 @@ final class EmailOctopusFieldMapper {
 		}
 
 		return array_values( $fields );
+	}
+
+	/**
+	 * Get fields that can be used as a newsletter opt-in.
+	 *
+	 * An implicit Jetpack consent field means submitting the form subscribes the
+	 * visitor. It is valid only when an administrator deliberately selects it for
+	 * a newsletter signup form. Radio and select fields need an affirmative
+	 * option to be configured separately, so they are not supported.
+	 *
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_newsletter_source_fields() {
+		return self::get_newsletter_source_fields_for_contact_page( Settings::get_contact_page_id() );
+	}
+
+	/**
+	 * Get newsletter opt-in fields on a contact page.
+	 *
+	 * @param int $contact_page_id Contact page ID.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_newsletter_source_fields_for_contact_page( $contact_page_id ) {
+		return array_values(
+			array_filter(
+				self::get_source_fields_for_contact_page( $contact_page_id ),
+				array( __CLASS__, 'is_supported_newsletter_source_field' )
+			)
+		);
+	}
+
+	/**
+	 * Get fields that can be used as EmailOctopus email_address.
+	 *
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_email_source_fields() {
+		return self::get_email_source_fields_for_contact_page( Settings::get_contact_page_id() );
+	}
+
+	/**
+	 * Get email source fields on a contact page.
+	 *
+	 * @param int $contact_page_id Contact page ID.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_email_source_fields_for_contact_page( $contact_page_id ) {
+		return array_values(
+			array_filter(
+				self::get_source_fields_for_contact_page( $contact_page_id ),
+				array( __CLASS__, 'is_supported_email_source_field' )
+			)
+		);
+	}
+
+	/**
+	 * Whether a detected field is supported as a newsletter opt-in source.
+	 *
+	 * @param array<string,string> $field Detected Jetpack field.
+	 * @return bool
+	 */
+	public static function is_supported_newsletter_source_field( $field ) {
+		return empty( $field['ambiguous'] ) && in_array( (string) ( $field['type'] ?? '' ), self::NEWSLETTER_SOURCE_FIELD_TYPES, true );
+	}
+
+	/**
+	 * Whether a detected field is supported as the EmailOctopus email source.
+	 *
+	 * @param array<string,string> $field Detected Jetpack field.
+	 * @return bool
+	 */
+	public static function is_supported_email_source_field( $field ) {
+		return empty( $field['ambiguous'] ) && in_array( (string) ( $field['type'] ?? '' ), self::EMAIL_SOURCE_FIELD_TYPES, true );
 	}
 
 	/**
@@ -118,8 +215,7 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Find the submitted email address.
 	 *
-	 * Uses an explicitly configured source first, then falls back to the
-	 * standard Jetpack email key and finally any submitted email-like field.
+	 * Uses only the explicitly configured source.
 	 *
 	 * @param array<string,mixed> $all_values Submitted Jetpack values.
 	 * @return string
@@ -127,27 +223,13 @@ final class EmailOctopusFieldMapper {
 	public static function get_email_address( $all_values ) {
 		$email_source = Settings::get_emailoctopus_email_source();
 
-		if ( '' !== $email_source ) {
-			$email = sanitize_email( self::get_submitted_value( $all_values, $email_source ) );
-
-			return is_email( $email ) ? $email : '';
+		if ( '' === $email_source ) {
+			return '';
 		}
 
-		if ( isset( $all_values['email'] ) && is_email( $all_values['email'] ) ) {
-			return (string) $all_values['email'];
-		}
+		$email = sanitize_email( self::get_submitted_value( $all_values, $email_source ) );
 
-		foreach ( $all_values as $key => $value ) {
-			if ( false === stripos( (string) $key, 'email' ) || ! is_string( $value ) ) {
-				continue;
-			}
-
-			if ( is_email( $value ) ) {
-				return $value;
-			}
-		}
-
-		return '';
+		return is_email( $email ) ? $email : '';
 	}
 
 	/**
@@ -196,8 +278,8 @@ final class EmailOctopusFieldMapper {
 	 *
 	 * @return string
 	 */
-	private static function get_contact_form_content() {
-		$page_content = get_post_field( 'post_content', Settings::get_contact_page_id() );
+	private static function get_contact_form_content( $contact_page_id ) {
+		$page_content = get_post_field( 'post_content', $contact_page_id );
 		$form_block   = self::find_contact_form_block( parse_blocks( is_string( $page_content ) ? $page_content : '' ) );
 
 		if ( ! is_array( $form_block ) ) {
@@ -248,15 +330,23 @@ final class EmailOctopusFieldMapper {
 		$block_name = (string) ( $block['blockName'] ?? '' );
 
 		if ( 0 === strpos( $block_name, 'jetpack/field-' ) ) {
-			$label = self::get_field_label( $block );
-			$key   = self::normalize_source_key( $label );
+			$label        = self::get_field_label( $block );
+			$type         = str_replace( 'jetpack/field-', '', $block_name );
+			$consent_type = sanitize_key( (string) ( $block['attrs']['consentType'] ?? $block['attrs']['consenttype'] ?? '' ) );
+			$key          = self::normalize_source_key( $label );
 
-			if ( '' !== $key && ! isset( $fields[ $key ] ) ) {
-				$fields[ $key ] = array(
-					'key'   => $key,
-					'label' => $label,
-					'type'  => str_replace( 'jetpack/field-', '', $block_name ),
-				);
+			if ( '' !== $key ) {
+				if ( isset( $fields[ $key ] ) ) {
+					$fields[ $key ]['ambiguous'] = '1';
+				} else {
+					$fields[ $key ] = array(
+						'key'          => $key,
+						'label'        => $label,
+						'type'         => $type,
+						'consent_type' => $consent_type,
+						'ambiguous'    => '0',
+					);
+				}
 			}
 		}
 
@@ -276,13 +366,7 @@ final class EmailOctopusFieldMapper {
 	 * @return string
 	 */
 	private static function get_field_label( $block ) {
-		$nested_label = self::find_nested_label( $block );
-
-		if ( '' !== $nested_label ) {
-			return $nested_label;
-		}
-
-		return ucwords( str_replace( '-', ' ', str_replace( 'jetpack/field-', '', (string) ( $block['blockName'] ?? '' ) ) ) );
+		return self::find_nested_label( $block );
 	}
 
 	/**
@@ -345,7 +429,9 @@ final class EmailOctopusFieldMapper {
 	 */
 	private static function get_submitted_value_raw( $all_values, $source ) {
 		foreach ( $all_values as $key => $value ) {
-			if ( self::normalize_source_key( (string) $key ) !== $source ) {
+			$key = preg_replace( '/^\d+_/', '', (string) $key );
+
+			if ( self::normalize_source_key( is_string( $key ) ? $key : '' ) !== $source ) {
 				continue;
 			}
 

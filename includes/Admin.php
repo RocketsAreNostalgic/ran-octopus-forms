@@ -632,40 +632,47 @@ final class Admin {
 	 * @return void
 	 */
 	private static function newsletter_source_dropdown( $selected ) {
-		$source_fields  = EmailOctopusFieldMapper::get_source_fields();
-		$selected_found = false;
+		$source_fields  = EmailOctopusFieldMapper::get_newsletter_source_fields();
+		$is_stale       = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
+		$stale_selected = $is_stale ? $selected : '';
+		$replacement    = $is_stale && 1 === count( $source_fields ) ? (string) $source_fields[0]['key'] : '';
+
+		if ( '' === $selected && 1 === count( $source_fields ) ) {
+			$selected = (string) $source_fields[0]['key'];
+		} elseif ( '' !== $replacement ) {
+			$selected = $replacement;
+		}
+
+		$needs_choice = '' === $selected;
 
 		if ( empty( $source_fields ) ) {
 			?>
-			<input type="hidden" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[newsletter_source]" value="<?php echo esc_attr( $selected ); ?>" />
 			<select class="regular-text" id="ran-octopus-forms-newsletter-source" disabled>
-				<option><?php esc_html_e( 'No Jetpack fields detected', 'ran-octopus-forms' ); ?></option>
+				<option><?php esc_html_e( 'No Jetpack opt-in fields detected', 'ran-octopus-forms' ); ?></option>
 			</select>
-			<p class="description"><?php esc_html_e( 'Add a Jetpack contact form to the configured contact page, then save settings to choose the opt-in checkbox.', 'ran-octopus-forms' ); ?></p>
+			<p class="description error"><strong><?php esc_html_e( 'The configured contact form has no checkbox or consent field that can record newsletter consent. Newsletter subscriptions are paused until you add one and save this setting.', 'ran-octopus-forms' ); ?></strong></p>
 			<?php
 			return;
 		}
 
 		?>
 		<select class="regular-text" id="ran-octopus-forms-newsletter-source" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[newsletter_source]">
+			<?php if ( $needs_choice ) : ?>
+				<option value="" disabled hidden selected><?php esc_html_e( 'Choose a newsletter opt-in source', 'ran-octopus-forms' ); ?></option>
+			<?php endif; ?>
 			<?php foreach ( $source_fields as $source_field ) : ?>
-				<?php
-				if ( ( $source_field['key'] ?? '' ) === $selected ) {
-					$selected_found = true;
-				}
-				?>
 				<option value="<?php echo esc_attr( $source_field['key'] ); ?>" <?php selected( $selected, $source_field['key'] ); ?>>
-					<?php echo esc_html( sprintf( '%s (%s)', $source_field['label'], $source_field['type'] ) ); ?>
+					<?php echo esc_html( self::get_source_field_option_label( $source_field ) ); ?>
 				</option>
 			<?php endforeach; ?>
-			<?php if ( '' !== $selected && ! $selected_found ) : ?>
-				<option value="<?php echo esc_attr( $selected ); ?>" selected>
-					<?php /* translators: %s: saved Jetpack field source key. */ ?>
-					<?php echo esc_html( sprintf( __( 'Saved source not detected: %s', 'ran-octopus-forms' ), $selected ) ); ?>
-				</option>
-			<?php endif; ?>
 		</select>
-		<p class="description"><?php esc_html_e( 'Choose the checkbox field that means the submitter opted into the newsletter.', 'ran-octopus-forms' ); ?></p>
+		<?php if ( $is_stale ) : ?>
+			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved newsletter opt-in field "%s" is no longer a current checkbox or consent field on the configured contact form. The only current supported field is selected above; save settings to confirm this replacement. Newsletter subscriptions remain paused until it is saved.', 'ran-octopus-forms' ), self::get_source_key_label( $stale_selected ) ) ); ?></strong></p>
+		<?php elseif ( $needs_choice ) : ?>
+			<p class="description error"><strong><?php esc_html_e( 'Select a current checkbox or consent field before newsletter subscriptions can run.', 'ran-octopus-forms' ); ?></strong></p>
+		<?php else : ?>
+			<p class="description"><?php esc_html_e( 'Choose the checkbox or consent field that records newsletter consent. An implicit Jetpack consent field means submitting the form subscribes the visitor.', 'ran-octopus-forms' ); ?></p>
+		<?php endif; ?>
 		<?php
 	}
 
@@ -676,42 +683,96 @@ final class Admin {
 	 * @return void
 	 */
 	private static function emailoctopus_email_source_dropdown( $selected ) {
-		$source_fields = EmailOctopusFieldMapper::get_source_fields();
+		$source_fields  = EmailOctopusFieldMapper::get_email_source_fields();
+		$is_stale       = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
+		$stale_selected = $is_stale ? $selected : '';
+		$replacement    = $is_stale && 1 === count( $source_fields ) ? (string) $source_fields[0]['key'] : '';
+
+		if ( '' === $selected && 1 === count( $source_fields ) ) {
+			$selected = (string) $source_fields[0]['key'];
+		} elseif ( '' !== $replacement ) {
+			$selected = $replacement;
+		}
+
+		$needs_choice = '' === $selected;
 
 		if ( empty( $source_fields ) ) {
 			?>
-			<input type="hidden" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_email_source]" value="<?php echo esc_attr( $selected ); ?>" />
 			<select class="regular-text" id="ran-octopus-forms-emailoctopus-email-source" disabled>
-				<option><?php esc_html_e( 'No Jetpack fields detected', 'ran-octopus-forms' ); ?></option>
+				<option><?php esc_html_e( 'No Jetpack email fields detected', 'ran-octopus-forms' ); ?></option>
 			</select>
-			<p class="description"><?php esc_html_e( 'Add a Jetpack contact form to the configured contact page, then save settings to choose the email source.', 'ran-octopus-forms' ); ?></p>
+			<p class="description error"><strong><?php esc_html_e( 'The configured contact form has no email field. EmailOctopus subscriptions are paused until you add one and save this setting.', 'ran-octopus-forms' ); ?></strong></p>
 			<?php
 			return;
 		}
 
-		$selected_found = false;
 		?>
 		<select class="regular-text" id="ran-octopus-forms-emailoctopus-email-source" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_email_source]">
-			<option value=""><?php esc_html_e( 'Auto-detect email field', 'ran-octopus-forms' ); ?></option>
+			<?php if ( $needs_choice ) : ?>
+				<option value="" disabled hidden selected><?php esc_html_e( 'Choose an email source', 'ran-octopus-forms' ); ?></option>
+			<?php endif; ?>
 			<?php foreach ( $source_fields as $source_field ) : ?>
-				<?php
-				if ( ( $source_field['key'] ?? '' ) === $selected ) {
-					$selected_found = true;
-				}
-				?>
 				<option value="<?php echo esc_attr( $source_field['key'] ); ?>" <?php selected( $selected, $source_field['key'] ); ?>>
-					<?php echo esc_html( sprintf( '%s (%s)', $source_field['label'], $source_field['type'] ) ); ?>
+					<?php echo esc_html( self::get_source_field_option_label( $source_field ) ); ?>
 				</option>
 			<?php endforeach; ?>
-			<?php if ( '' !== $selected && ! $selected_found ) : ?>
-				<option value="<?php echo esc_attr( $selected ); ?>" selected>
-					<?php /* translators: %s: saved Jetpack field source key. */ ?>
-					<?php echo esc_html( sprintf( __( 'Saved source not detected: %s', 'ran-octopus-forms' ), $selected ) ); ?>
-				</option>
-			<?php endif; ?>
 		</select>
-		<p class="description"><?php esc_html_e( 'RAN Octopus Forms sends this value as EmailOctopus email_address. Auto-detect first tries the Jetpack email field, then any submitted field with email in its key.', 'ran-octopus-forms' ); ?></p>
+		<?php if ( $is_stale ) : ?>
+			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved email source "%s" is no longer a current email field on the configured contact form. The only current supported field is selected above; save settings to confirm this replacement. EmailOctopus subscriptions remain paused until it is saved.', 'ran-octopus-forms' ), self::get_source_key_label( $stale_selected ) ) ); ?></strong></p>
+		<?php elseif ( $needs_choice ) : ?>
+			<p class="description error"><strong><?php esc_html_e( 'Select a current email field before EmailOctopus subscriptions can run.', 'ran-octopus-forms' ); ?></strong></p>
+		<?php else : ?>
+			<p class="description"><?php esc_html_e( 'RAN Octopus Forms sends this field as EmailOctopus email_address. The source is always explicit; it is never auto-detected during a submission.', 'ran-octopus-forms' ); ?></p>
+		<?php endif; ?>
 		<?php
+	}
+
+	/**
+	 * Whether a source key appears in the current candidate list.
+	 *
+	 * @param array<int,array<string,string>> $source_fields Candidate fields.
+	 * @param string                           $source        Saved source key.
+	 * @return bool
+	 */
+	private static function has_source_field( $source_fields, $source ) {
+		foreach ( $source_fields as $source_field ) {
+			if ( ( $source_field['key'] ?? '' ) === $source ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Build a human-readable label for a source selector option.
+	 *
+	 * @param array<string,string> $source_field Detected Jetpack field.
+	 * @return string
+	 */
+	private static function get_source_field_option_label( $source_field ) {
+		$label = (string) ( $source_field['label'] ?? '' );
+		$type  = (string) ( $source_field['type'] ?? '' );
+
+		if ( 'consent' === $type ) {
+			if ( 'explicit' === ( $source_field['consent_type'] ?? '' ) ) {
+				return sprintf( /* translators: %s: Jetpack consent field label. */ __( '%1$s (consent checkbox)', 'ran-octopus-forms' ), $label );
+			}
+
+			return sprintf( /* translators: %s: Jetpack consent field label. */ __( '%1$s (consent; submitting this form subscribes the visitor)', 'ran-octopus-forms' ), $label );
+		}
+
+		return sprintf( '%s (%s)', $label, $type );
+	}
+
+	/**
+	 * Turn a stored source key into a readable fallback label.
+	 *
+	 * @param string $source Saved source key.
+	 * @return string
+	 */
+	private static function get_source_key_label( $source ) {
+		return str_replace( '_', ' ', $source );
 	}
 
 	/**
@@ -815,6 +876,7 @@ final class Admin {
 						$mapping   = is_array( $field_map[ $tag ] ?? null ) ? $field_map[ $tag ] : array();
 						$source    = (string) ( $mapping['source'] ?? '' );
 						$transform = (string) ( $mapping['transform'] ?? 'as_is' );
+						$is_stale  = '' !== $source && ! self::has_source_field( $source_fields, $source );
 						?>
 						<tr>
 							<td>
@@ -823,7 +885,13 @@ final class Admin {
 							</td>
 							<td><?php echo esc_html( (string) ( $field['type'] ?? '' ) ); ?></td>
 							<td>
+								<?php if ( $is_stale ) : ?>
+									<input type="hidden" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_field_map][<?php echo esc_attr( $tag ); ?>][preserve_source]" value="<?php echo esc_attr( $source ); ?>" />
+								<?php endif; ?>
 								<select name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_field_map][<?php echo esc_attr( $tag ); ?>][source]">
+									<?php if ( $is_stale ) : ?>
+										<option value="" disabled hidden selected><?php esc_html_e( 'Choose a replacement source', 'ran-octopus-forms' ); ?></option>
+									<?php endif; ?>
 									<option value=""><?php esc_html_e( 'Do not send', 'ran-octopus-forms' ); ?></option>
 									<?php foreach ( $source_fields as $source_field ) : ?>
 										<option value="<?php echo esc_attr( $source_field['key'] ); ?>" <?php selected( $source, $source_field['key'] ); ?>>
@@ -831,6 +899,9 @@ final class Admin {
 										</option>
 									<?php endforeach; ?>
 								</select>
+								<?php if ( $is_stale ) : ?>
+									<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved Jetpack source "%s" is no longer on the configured contact form. Choose a current field or select Do not send, then save settings.', 'ran-octopus-forms' ), self::get_source_key_label( $source ) ) ); ?></strong></p>
+								<?php endif; ?>
 							</td>
 							<td>
 								<select name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_field_map][<?php echo esc_attr( $tag ); ?>][transform]">

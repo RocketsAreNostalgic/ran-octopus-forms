@@ -31,11 +31,6 @@ final class Settings {
 	const EMAILOCTOPUS_FORM_ID = '';
 
 	/**
-	 * Default Jetpack source key for newsletter opt-ins.
-	 */
-	const NEWSLETTER_SOURCE = 'join_our_newsletter';
-
-	/**
 	 * CSS class that identifies the single form owned by this integration.
 	 */
 	const TARGET_FORM_CLASS = 'ran-octopus-forms-contact-form';
@@ -82,7 +77,7 @@ final class Settings {
 			'emailoctopus_subscribed_message' => __( 'You’re now subscribed to our newsletter.', 'ran-octopus-forms' ),
 			'emailoctopus_existing_message'   => __( 'This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier.', 'ran-octopus-forms' ),
 			'emailoctopus_failure_message'    => __( 'Your message has been sent, but we could not add you to the newsletter. Please try again later.', 'ran-octopus-forms' ),
-			'newsletter_source'               => self::NEWSLETTER_SOURCE,
+			'newsletter_source'               => '',
 			'turnstile_enabled'               => 0,
 			'turnstile_site_key'              => '',
 			'turnstile_secret_key'            => '',
@@ -243,13 +238,13 @@ final class Settings {
 			$settings['emailoctopus_list_id'] = sanitize_text_field( $input['emailoctopus_list_id'] ?? '' );
 		}
 
-		$settings['emailoctopus_email_source']       = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['emailoctopus_email_source'] ?? '' ) );
-		$settings['emailoctopus_field_map']          = self::sanitize_emailoctopus_field_map( $input['emailoctopus_field_map'] ?? array() );
+		$settings['emailoctopus_email_source']       = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['emailoctopus_email_source'] ?? $current['emailoctopus_email_source'] ?? '' ) );
+		$settings['emailoctopus_field_map']          = self::sanitize_emailoctopus_field_map( $input['emailoctopus_field_map'] ?? array(), $current['emailoctopus_field_map'] ?? array() );
 		$settings['emailoctopus_pending_message']    = sanitize_textarea_field( $input['emailoctopus_pending_message'] ?? $settings['emailoctopus_pending_message'] );
 		$settings['emailoctopus_subscribed_message'] = sanitize_textarea_field( $input['emailoctopus_subscribed_message'] ?? $settings['emailoctopus_subscribed_message'] );
 		$settings['emailoctopus_existing_message']   = sanitize_textarea_field( $input['emailoctopus_existing_message'] ?? $settings['emailoctopus_existing_message'] );
 		$settings['emailoctopus_failure_message']    = sanitize_textarea_field( $input['emailoctopus_failure_message'] ?? $settings['emailoctopus_failure_message'] );
-		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? self::NEWSLETTER_SOURCE ) );
+		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? $current['newsletter_source'] ?? '' ) );
 		$settings['turnstile_enabled']               = empty( $input['turnstile_enabled'] ) ? 0 : 1;
 		$settings['turnstile_site_key']              = sanitize_text_field( $input['turnstile_site_key'] ?? '' );
 
@@ -262,26 +257,84 @@ final class Settings {
 			$settings['turnstile_secret_key'] = self::TURNSTILE_TEST_SECRET_KEY;
 		}
 
-		if ( '' === $settings['newsletter_source'] ) {
-			$settings['newsletter_source'] = self::NEWSLETTER_SOURCE;
-		}
+		self::warn_about_invalid_source_mappings( $settings, $contact_page_id );
 
 		return $settings;
 	}
 
 	/**
+	 * Add actionable Settings API warnings for unresolved subscription sources.
+	 *
+	 * The settings remain saved so administrators can correct one mapping while
+	 * changing unrelated configuration. Subscription attempts remain paused until
+	 * both sources are valid.
+	 *
+	 * @param array<string,mixed> $settings        Sanitized settings.
+	 * @param int                 $contact_page_id Contact page ID.
+	 * @return void
+	 */
+	private static function warn_about_invalid_source_mappings( $settings, $contact_page_id ) {
+		if ( '' === (string) ( $settings['emailoctopus_form_id'] ?? '' ) && '' === (string) ( $settings['emailoctopus_list_id'] ?? '' ) ) {
+			return;
+		}
+
+		$email_fields      = EmailOctopusFieldMapper::get_email_source_fields_for_contact_page( $contact_page_id );
+		$newsletter_fields = EmailOctopusFieldMapper::get_newsletter_source_fields_for_contact_page( $contact_page_id );
+
+		if ( ! self::has_valid_source_field( $email_fields, (string) ( $settings['emailoctopus_email_source'] ?? '' ) ) ) {
+			add_settings_error(
+				self::OPTION_NAME,
+				'ran_octopus_forms_invalid_email_source',
+				__( 'EmailOctopus email source needs attention: select a current email field before subscriptions can run.', 'ran-octopus-forms' ),
+				'warning'
+			);
+		}
+
+		if ( ! self::has_valid_source_field( $newsletter_fields, (string) ( $settings['newsletter_source'] ?? '' ) ) ) {
+			add_settings_error(
+				self::OPTION_NAME,
+				'ran_octopus_forms_invalid_newsletter_source',
+				__( 'Newsletter opt-in source needs attention: select a current checkbox or consent field before subscriptions can run.', 'ran-octopus-forms' ),
+				'warning'
+			);
+		}
+	}
+
+	/**
+	 * Whether a saved source belongs to the current source candidates.
+	 *
+	 * @param array<int,array<string,string>> $source_fields Candidate fields.
+	 * @param string                           $source        Saved source key.
+	 * @return bool
+	 */
+	private static function has_valid_source_field( $source_fields, $source ) {
+		if ( '' === $source ) {
+			return false;
+		}
+
+		foreach ( $source_fields as $source_field ) {
+			if ( ( $source_field['key'] ?? '' ) === $source ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * Sanitize EmailOctopus field mapping settings.
 	 *
-	 * @param mixed $input Raw field map input.
+	 * @param mixed $input   Raw field map input.
+	 * @param mixed $current Existing field map.
 	 * @return array<string,array<string,string>>
 	 */
-	private static function sanitize_emailoctopus_field_map( $input ) {
+	private static function sanitize_emailoctopus_field_map( $input, $current ) {
 		if ( ! is_array( $input ) ) {
-			return array();
+			return is_array( $current ) ? $current : array();
 		}
 
 		$transforms = array_keys( EmailOctopusFieldMapper::get_transform_options() );
-		$field_map  = array();
+		$field_map  = is_array( $current ) ? $current : array();
 
 		foreach ( $input as $tag => $mapping ) {
 			if ( ! is_array( $mapping ) ) {
@@ -289,10 +342,15 @@ final class Settings {
 			}
 
 			$tag       = sanitize_text_field( (string) $tag );
-			$source    = EmailOctopusFieldMapper::normalize_source_key( (string) ( $mapping['source'] ?? '' ) );
+			$source    = EmailOctopusFieldMapper::normalize_source_key( (string) ( $mapping['source'] ?? $mapping['preserve_source'] ?? '' ) );
 			$transform = sanitize_key( (string) ( $mapping['transform'] ?? 'as_is' ) );
 
-			if ( '' === $tag || '' === $source ) {
+			if ( '' === $tag ) {
+				continue;
+			}
+
+			if ( '' === $source ) {
+				unset( $field_map[ $tag ] );
 				continue;
 			}
 
@@ -599,7 +657,7 @@ final class Settings {
 	/**
 	 * Get configured Jetpack source key for EmailOctopus email_address.
 	 *
-	 * Empty means auto-detect.
+	 * Empty means no email source has been configured.
 	 *
 	 * @return string
 	 */
@@ -609,7 +667,7 @@ final class Settings {
 		/**
 		 * Filters the configured EmailOctopus email source key.
 		 *
-		 * @param string $source Normalized Jetpack source key. Empty means auto-detect.
+	 * @param string $source Normalized Jetpack source key. Empty means unconfigured.
 		 */
 		return (string) apply_filters( 'ran_octopus_forms_emailoctopus_email_source', $source );
 	}
