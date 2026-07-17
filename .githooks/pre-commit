@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -eu
+
+if ! git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(includes/.*\.php$|ran-octopus-forms\.php$|languages/|scripts/make-pot\.mjs$)'; then
+	exit 0
+fi
+
+pnpm make-pot
+
+if ! git diff --quiet -- languages/ran-octopus-forms.pot; then
+	echo 'The translation template is out of date.' >&2
+	echo 'Review and stage languages/ran-octopus-forms.pot before committing.' >&2
+	git diff --name-only -- languages/ran-octopus-forms.pot >&2
+	exit 1
+fi

@@ -26,6 +26,8 @@
 		"typescript": "~5.4.5"
 	},
 	"scripts": {
+		"hooks:install": "git config core.hooksPath .githooks",
+		"prepare": "pnpm hooks:install",
 		"format": "prettier --write --ignore-path .prettierignore --ignore-unknown .",
 		"format:check": "prettier --check --ignore-path .prettierignore --ignore-unknown .",
 		"lint:js": "node scripts/lint-sources.mjs js",
