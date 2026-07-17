@@ -35,9 +35,11 @@
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"check": "pnpm run lint:pkg-json && pnpm run lint:js && pnpm run lint:css && pnpm run format:check",
 		"make-pot": "node scripts/make-pot.mjs",
+		"check:generated": "pnpm make-pot && git diff --exit-code -- languages/ran-octopus-forms.pot",
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
-		"release": "sh scripts/build-release.sh"
+		"release": "sh scripts/build-release.sh",
+		"release:verify": "tmp_dir=$(mktemp -d) && sh scripts/build-release.sh \"$tmp_dir\""
 	},
 	"prettier": {
 		"useTabs": true,

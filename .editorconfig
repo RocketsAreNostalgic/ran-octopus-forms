@@ -1,0 +1,32 @@
+# WordPress-oriented editor defaults.
+# See https://developer.wordpress.org/coding-standards/.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# WordPress PHP, CSS, and JavaScript standards use tabs for indentation.
+[*.{php,css,js,jsx,ts,tsx}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# JSON in this project is formatted by @wordpress/prettier-config, which uses tabs.
+[*.json]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+
+# YAML does not allow tabs for indentation.
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+indent_style = space
+indent_size = 2
+trim_trailing_whitespace = false
