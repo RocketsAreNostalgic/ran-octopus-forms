@@ -74,6 +74,11 @@ never overwrites an existing archive. The GitHub workflow checks PHP 8.0 and
 the current supported PHP combination, translation freshness, PHPCS, PHPUnit,
 Plugin Check, and release archive contents.
 
+## Agent workflow
+
+See [AGENTS.md](AGENTS.md) for the local Dex workflow, WordPress skills,
+generated-asset rules, quality checks, and release guidance.
+
 ## WordPress.org preparation
 
 The public directory readme is [readme.txt](readme.txt). GitHub remains the
