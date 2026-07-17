@@ -1,6 +1,6 @@
 {
 	"name": "ran-octopus-forms",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"private": true,
 	"description": "WordPress contact-form integrations for Jetpack Forms, EmailOctopus, and Cloudflare Turnstile.",
 	"author": "bnjmnrsh",

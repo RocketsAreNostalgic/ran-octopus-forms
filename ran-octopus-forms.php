@@ -4,7 +4,7 @@
  * Plugin URI: https://github.com/RocketsAreNostalgic/ran-octopus-forms
  * Description: Site-owned contact form integrations for WordPress sites.
  * x-release-please-start-version
- * Version: 1.0.0
+ * Version: 1.1.0
  * x-release-please-end
  * Author: bnjmnrsh
  * Author URI: https://github.com/RocketsAreNostalgic/
@@ -24,7 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // x-release-please-start-version
-define( 'RAN_OCTOPUS_FORMS_VERSION', '1.0.0' );
+define( 'RAN_OCTOPUS_FORMS_VERSION', '1.1.0' );
 // x-release-please-end
 define( 'RAN_OCTOPUS_FORMS_PLUGIN_FILE', __FILE__ );
 define( 'RAN_OCTOPUS_FORMS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
