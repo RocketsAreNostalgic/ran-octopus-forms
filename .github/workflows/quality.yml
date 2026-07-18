@@ -32,8 +32,10 @@ jobs:
                 include:
                     - php: '8.0'
                       wordpress: '6.5'
+                      jetpack: '13.3.1'
                     - php: '8.3'
                       wordpress: 'latest'
+                      jetpack: 'latest'
         steps:
             - uses: actions/checkout@v4
             - uses: shivammathur/setup-php@v2
@@ -70,7 +72,12 @@ jobs:
                   wp config create --path="$fresh_root" --dbname=ran_emailoctopus_jetpack_forms_release --dbuser=root --dbpass=root --dbhost=127.0.0.1:3306 --skip-check
                   wp db create --path="$fresh_root"
                   wp core install --path="$fresh_root" --url=http://localhost --title='RAN release test' --admin_user=admin --admin_password=release-test-password --admin_email=admin@example.test
-                  wp plugin install jetpack --path="$fresh_root" --activate
+                  jetpack_version='${{ matrix.jetpack }}'
+                  if [ "$jetpack_version" = 'latest' ]; then
+                    wp plugin install jetpack --path="$fresh_root" --activate
+                  else
+                    wp plugin install jetpack --version="$jetpack_version" --path="$fresh_root" --activate
+                  fi
                   archive=$(sh scripts/release-archive-path.sh /tmp/ran-emailoctopus-jetpack-forms-release)
                   wp plugin install "$archive" --path="$fresh_root" --activate
                   wp plugin is-active ran-emailoctopus-jetpack-forms --path="$fresh_root"
