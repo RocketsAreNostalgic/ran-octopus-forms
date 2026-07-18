@@ -189,6 +189,10 @@ final class JetpackForms {
 			return;
 		}
 
+		if ( in_array( get_post_status( $post_id ), array( 'spam', 'trash' ), true ) ) {
+			return;
+		}
+
 		if ( ! self::has_newsletter_opt_in( $all_values ) ) {
 			return;
 		}
