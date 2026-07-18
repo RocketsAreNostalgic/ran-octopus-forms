@@ -41,13 +41,13 @@ jobs:
                   php-version: ${{ matrix.php }}
                   coverage: none
                   tools: wp-cli
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 11.5.2
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 11.5.2
             - run: pnpm install --frozen-lockfile
             - run: composer install --no-interaction --prefer-dist
             - run: pnpm check
@@ -79,13 +79,13 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+              with:
+                  version: 11.5.2
             - uses: actions/setup-node@v4
               with:
                   node-version: 22
                   cache: pnpm
-            - uses: pnpm/action-setup@v4
-              with:
-                  version: 11.5.2
             - run: pnpm install --frozen-lockfile
             - run: pnpm release
             - run: mkdir plugin-check-build && unzip -q "$(sh scripts/release-archive-path.sh)" -d plugin-check-build
