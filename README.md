@@ -20,9 +20,11 @@ configures them, no EmailOctopus request or Turnstile script is made.
 2. Choose the contact and success pages in **Settings > RAN Octopus Forms**.
 3. Insert **Contact Newsletter Form** from the plugin-owned **RAN Forms**
    pattern category on the chosen contact page.
-4. Configure EmailOctopus only if opted-in subscribers should be sent to a
+4. Configure the client's preferred recipient using Jetpack's native **Form
+   notifications** settings on the contact form.
+5. Configure EmailOctopus only if opted-in subscribers should be sent to a
    selected destination. Configure Turnstile only if verification is required.
-5. Add `[ran_octopus_forms_subscription_message]` in a Shortcode block on the
+6. Add `[ran_octopus_forms_subscription_message]` in a Shortcode block on the
    chosen success page. The plugin passes a one-time result to that page and
    shows the configured confirmation, subscription, existing-email, or problem
    message.
