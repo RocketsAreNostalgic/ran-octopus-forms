@@ -4,9 +4,9 @@ Tags: contact form, jetpack, emailoctopus, newsletter
 Requires at least: 6.5
 Tested up to: 7.0
 Requires PHP: 8.0
-<!-- x-release-please-start-version -->
+X-Release-Please-Start-Version: x-release-please-start-version
 Stable tag: 1.0.0
-<!-- x-release-please-end -->
+X-Release-Please-End: x-release-please-end
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
