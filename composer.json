@@ -1,6 +1,6 @@
 {
-	"name": "rocketsarenostalgic/ran-octopus-forms",
-	"description": "WordPress integrations for one marked Jetpack contact form.",
+	"name": "rocketsarenostalgic/ran-emailoctopus-jetpack-forms",
+	"description": "EmailOctopus subscriptions from one marked Jetpack contact form.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require": {

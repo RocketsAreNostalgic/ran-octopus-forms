@@ -2,16 +2,16 @@
 /**
  * Integration coverage for Health Check email-source validation.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\HealthCheck;
-use RAN\OctopusForms\Settings;
+use RAN\EmailOctopusJetpackForms\HealthCheck;
+use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
  * Ensure Health Check validates email source fields by Jetpack block type.
  */
-class RAN_Octopus_Forms_Health_Check_Email_Source_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted integration state.
 	 *

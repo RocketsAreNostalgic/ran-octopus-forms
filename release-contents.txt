@@ -4,5 +4,5 @@ README.md
 THIRD-PARTY.md
 includes/
 languages/
-ran-octopus-forms.php
+ran-emailoctopus-jetpack-forms.php
 readme.txt

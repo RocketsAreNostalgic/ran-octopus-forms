@@ -1,11 +1,11 @@
 <?php
 /**
- * RAN Octopus Forms plugin coordinator.
+ * RAN EmailOctopus for Jetpack Forms plugin coordinator.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -34,7 +34,6 @@ final class Plugin {
 
 		Patterns::register();
 		JetpackForms::register();
-		Turnstile::register();
 		Admin::register();
 	}
 }

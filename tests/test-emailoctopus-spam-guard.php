@@ -2,17 +2,17 @@
 /**
  * Integration coverage for rejected-feedback subscription guards.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\JetpackForms;
-use RAN\OctopusForms\Patterns;
-use RAN\OctopusForms\Settings;
+use RAN\EmailOctopusJetpackForms\JetpackForms;
+use RAN\EmailOctopusJetpackForms\Patterns;
+use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
  * Ensure Jetpack-rejected feedback cannot trigger EmailOctopus side effects.
  */
-class RAN_Octopus_Forms_EmailOctopus_Spam_Guard_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted integration and request state.
 	 *

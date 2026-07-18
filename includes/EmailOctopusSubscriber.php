@@ -2,10 +2,10 @@
 /**
  * EmailOctopus subscription client.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -26,14 +26,14 @@ final class EmailOctopusSubscriber {
 		$email_address = sanitize_email( $email_address );
 
 		if ( ! is_email( $email_address ) ) {
-			return new \WP_Error( 'ran_octopus_forms_invalid_email', __( 'A valid email address is required.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_invalid_email', __( 'A valid email address is required.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$api_key = $this->get_api_key();
 		$list_id = $this->get_list_id();
 
 		if ( '' === $api_key || '' === $list_id ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_credentials', __( 'EmailOctopus credentials are unavailable.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_credentials', __( 'EmailOctopus credentials are unavailable.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$body = array(
@@ -77,7 +77,7 @@ final class EmailOctopusSubscriber {
 				return array( 'outcome' => 'subscribed' );
 			}
 
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_unknown_contact_status', __( 'EmailOctopus returned an unknown contact status.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_unknown_contact_status', __( 'EmailOctopus returned an unknown contact status.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		if ( is_array( $body ) && 'MEMBER_EXISTS_WITH_EMAIL_ADDRESS' === ( $body['code'] ?? '' ) ) {
@@ -86,7 +86,7 @@ final class EmailOctopusSubscriber {
 
 		return new \WP_Error(
 			'ran_octopus_forms_emailoctopus_bad_response',
-			is_array( $body ) && ! empty( $body['message'] ) ? sanitize_text_field( (string) $body['message'] ) : __( 'EmailOctopus returned an unexpected response.', 'ran-octopus-forms' ),
+			is_array( $body ) && ! empty( $body['message'] ) ? sanitize_text_field( (string) $body['message'] ) : __( 'EmailOctopus returned an unexpected response.', 'ran-emailoctopus-jetpack-forms' ),
 			array(
 				'status' => $status_code,
 				'code'   => is_array( $body ) ? ( $body['code'] ?? '' ) : '',

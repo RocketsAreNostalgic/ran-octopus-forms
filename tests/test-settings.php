@@ -2,18 +2,17 @@
 /**
  * Integration coverage for configuration and target-form ownership.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\JetpackForms;
-use RAN\OctopusForms\Patterns;
-use RAN\OctopusForms\Settings;
-use RAN\OctopusForms\Turnstile;
+use RAN\EmailOctopusJetpackForms\JetpackForms;
+use RAN\EmailOctopusJetpackForms\Patterns;
+use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
  * Ensure a fresh installation and upgraded installation stay isolated.
  */
-class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted integration state.
 	 *
@@ -22,6 +21,7 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 		delete_option( Settings::OPTION_NAME );
+		delete_option( Settings::PREVIOUS_OPTION_NAME );
 		delete_option( Settings::LEGACY_OPTION_NAME );
 		delete_option( Settings::VERSION_OPTION );
 		$GLOBALS['wp_settings_errors'] = array();
@@ -36,6 +36,55 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 	public function test_new_install_has_no_page_or_success_url_default() {
 		$this->assertSame( 0, Settings::get_contact_page_id() );
 		$this->assertSame( '', Settings::get_success_url() );
+	}
+
+	/**
+	 * The rebranded connector copies only its own fields from the bundled option.
+	 *
+	 * @return void
+	 */
+	public function test_rebrand_migration_excludes_turnstile_settings_and_keeps_source() {
+		$legacy_settings = array(
+			'contact_page_id'      => 42,
+			'emailoctopus_list_id' => 'newsletter-list',
+			'turnstile_enabled'    => 1,
+			'turnstile_site_key'   => 'legacy-site-key',
+			'turnstile_secret_key' => 'legacy-secret-key',
+		);
+
+		update_option( Settings::PREVIOUS_OPTION_NAME, $legacy_settings );
+		$migrated = Settings::get_all();
+
+		$this->assertSame( 42, $migrated['contact_page_id'] );
+		$this->assertSame( 'newsletter-list', $migrated['emailoctopus_list_id'] );
+		$this->assertArrayNotHasKey( 'turnstile_enabled', $migrated );
+		$this->assertArrayNotHasKey( 'turnstile_site_key', $migrated );
+		$this->assertArrayNotHasKey( 'turnstile_secret_key', $migrated );
+		$this->assertSame( $legacy_settings, get_option( Settings::PREVIOUS_OPTION_NAME ) );
+	}
+
+	/**
+	 * New filters run after the previous hook alias.
+	 *
+	 * @return void
+	 */
+	public function test_emailoctopus_list_filters_keep_the_legacy_alias() {
+		update_option( Settings::OPTION_NAME, array( 'emailoctopus_list_id' => 'saved-list' ) );
+		$legacy_filter = static function ( $list_id ) {
+			return $list_id . '-legacy';
+		};
+		$new_filter    = static function ( $list_id ) {
+			return $list_id . '-new';
+		};
+
+		add_filter( 'ran_octopus_forms_emailoctopus_list_id', $legacy_filter );
+		add_filter( 'ran_emailoctopus_jetpack_forms_emailoctopus_list_id', $new_filter );
+		$this->setExpectedDeprecated( 'ran_octopus_forms_emailoctopus_list_id' );
+
+		$this->assertSame( 'saved-list-legacy-new', Settings::get_emailoctopus_list_id() );
+
+		remove_filter( 'ran_octopus_forms_emailoctopus_list_id', $legacy_filter );
+		remove_filter( 'ran_emailoctopus_jetpack_forms_emailoctopus_list_id', $new_filter );
 	}
 
 	/**
@@ -236,39 +285,6 @@ class RAN_Octopus_Forms_Settings_Test extends WP_UnitTestCase {
 		$_POST['ran_octopus_forms_target'] = wp_create_nonce( 'ran_octopus_forms_target_' . $page_id );
 		$this->assertTrue( JetpackForms::is_target_submission() );
 		$this->assertFalse( JetpackForms::disable_ajax_for_contact_form( true ) );
-	}
-
-	/**
-	 * Optional Turnstile must be added to only the marked form's rendered HTML.
-	 *
-	 * @return void
-	 */
-	public function test_turnstile_widget_is_scoped_to_the_marked_form() {
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
-			)
-		);
-
-		update_option(
-			Settings::OPTION_NAME,
-			array(
-				'contact_page_id'      => $page_id,
-				'turnstile_enabled'    => 1,
-				'turnstile_site_key'   => 'site-key',
-				'turnstile_secret_key' => 'secret-key',
-			)
-		);
-
-		$this->go_to( get_permalink( $page_id ) );
-
-		$marked_html = '<form class="' . Settings::TARGET_FORM_CLASS . '"><div class="wp-block-button"></div></form>';
-		$other_html  = '<form><div class="wp-block-button"></div></form>';
-
-		$this->assertStringContainsString( 'cf-turnstile', Turnstile::append_widget( $marked_html ) );
-		$this->assertSame( $other_html, Turnstile::append_widget( $other_html ) );
 	}
 
 	/**

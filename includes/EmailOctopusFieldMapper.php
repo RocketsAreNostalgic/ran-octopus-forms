@@ -2,10 +2,10 @@
 /**
  * EmailOctopus field mapping helpers.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -36,10 +36,10 @@ final class EmailOctopusFieldMapper {
 	 */
 	public static function get_transform_options() {
 		return array(
-			'as_is'           => __( 'No transform', 'ran-octopus-forms' ),
-			'first_word'      => __( 'Use first word only', 'ran-octopus-forms' ),
-			'remaining_words' => __( 'Use everything after first word', 'ran-octopus-forms' ),
-			'lowercase'       => __( 'Send lowercase', 'ran-octopus-forms' ),
+			'as_is'           => __( 'No transform', 'ran-emailoctopus-jetpack-forms' ),
+			'first_word'      => __( 'Use first word only', 'ran-emailoctopus-jetpack-forms' ),
+			'remaining_words' => __( 'Use everything after first word', 'ran-emailoctopus-jetpack-forms' ),
+			'lowercase'       => __( 'Send lowercase', 'ran-emailoctopus-jetpack-forms' ),
 		);
 	}
 

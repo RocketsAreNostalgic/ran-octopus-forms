@@ -4,14 +4,14 @@
 	"packages": {
 		".": {
 			"release-type": "php",
-			"package-name": "ran-octopus-forms",
+			"package-name": "ran-emailoctopus-jetpack-forms",
 			"changelog-path": "CHANGELOG.md",
 			"include-component-in-tag": false,
 			"include-v-in-tag": true,
 			"extra-files": [
 				{
 					"type": "generic",
-					"path": "ran-octopus-forms.php"
+					"path": "ran-emailoctopus-jetpack-forms.php"
 				},
 				{
 					"type": "generic",
@@ -24,7 +24,7 @@
 				},
 				{
 					"type": "generic",
-					"path": "languages/ran-octopus-forms.pot"
+					"path": "languages/ran-emailoctopus-jetpack-forms.pot"
 				}
 			]
 		}

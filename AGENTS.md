@@ -2,9 +2,9 @@
 
 ## Project contract
 
-This is the standalone RAN Octopus Forms WordPress plugin repository inside a
-larger local WordPress installation. Work in this directory unless the task
-explicitly concerns the parent site.
+This is the standalone RAN EmailOctopus for Jetpack Forms WordPress plugin
+repository inside a larger local WordPress installation. Work in this
+directory unless the task explicitly concerns the parent site.
 
 The supported baseline is WordPress 6.5+ and PHP 8.0+. Keep the plugin header,
 `composer.json`, PHPCS configuration, CI, and documentation aligned whenever
@@ -56,7 +56,8 @@ WP_TESTS_DIR=/path/to/wordpress-tests-lib pnpm test:php
 pnpm release:verify
 ```
 
-The committed generated asset is `languages/ran-octopus-forms.pot`. Rebuild it
+The committed generated asset is
+`languages/ran-emailoctopus-jetpack-forms.pot`. Rebuild it
 with `pnpm make-pot` when relevant source changes require it, then review and
 stage the result. The pre-commit hook checks POT freshness for its configured
 source paths; tooling, documentation, and release-only changes must not cause
@@ -76,7 +77,7 @@ operating this repository's release workflow.
 
 This is a standalone GitHub repository. Release Please should run from `main`
 with a manifest-driven PHP release configuration. The WordPress plugin header
-and runtime constant in `ran-octopus-forms.php`, `readme.txt` stable tag,
+and runtime constant in `ran-emailoctopus-jetpack-forms.php`, `readme.txt` stable tag,
 `package.json`, tracked POT project version, and `CHANGELOG.md` must agree
 with the release version. The normal PHP strategy does not update those
 WordPress-specific sources automatically; configure and test explicit

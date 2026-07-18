@@ -2,10 +2,10 @@
 /**
  * Jetpack Forms integration.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;

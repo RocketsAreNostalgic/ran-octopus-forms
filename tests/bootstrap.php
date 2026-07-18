@@ -2,7 +2,7 @@
 /**
  * WordPress integration-test bootstrap.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
 $_tests_dir = getenv( 'WP_TESTS_DIR' );
@@ -30,7 +30,7 @@ require_once $_tests_dir . '/includes/functions.php';
 tests_add_filter(
 	'muplugins_loaded',
 	static function () {
-		require dirname( __DIR__ ) . '/ran-octopus-forms.php';
+		require dirname( __DIR__ ) . '/ran-emailoctopus-jetpack-forms.php';
 	}
 );
 

@@ -2,10 +2,10 @@
 /**
  * Block pattern registration.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -48,7 +48,7 @@ final class Patterns {
 		register_block_pattern_category(
 			self::PATTERN_CATEGORY,
 			array(
-				'label' => __( 'RAN Forms', 'ran-octopus-forms' ),
+				'label' => __( 'RAN Forms', 'ran-emailoctopus-jetpack-forms' ),
 			)
 		);
 
@@ -59,8 +59,8 @@ final class Patterns {
 		register_block_pattern(
 			self::CONTACT_FORM_PATTERN,
 			array(
-				'title'         => __( 'Contact Newsletter Form', 'ran-octopus-forms' ),
-				'description'   => __( 'Jetpack contact form with name, email, message, and newsletter opt-in checkbox.', 'ran-octopus-forms' ),
+				'title'         => __( 'Contact Newsletter Form', 'ran-emailoctopus-jetpack-forms' ),
+				'description'   => __( 'Jetpack contact form with name, email, message, and newsletter opt-in checkbox.', 'ran-emailoctopus-jetpack-forms' ),
 				'categories'    => array( self::PATTERN_CATEGORY ),
 				'keywords'      => array( 'contact', 'form', 'newsletter', 'emailoctopus' ),
 				'content'       => self::get_contact_form_content(),
@@ -75,12 +75,12 @@ final class Patterns {
 	 * @return string
 	 */
 	public static function get_contact_form_content() {
-		$name_label        = wp_json_encode( __( 'Name', 'ran-octopus-forms' ) );
-		$email_label       = wp_json_encode( __( 'Email', 'ran-octopus-forms' ) );
-		$message_label     = wp_json_encode( __( 'Message', 'ran-octopus-forms' ) );
-		$newsletter_label  = wp_json_encode( __( 'Join our newsletter!', 'ran-octopus-forms' ) );
-		$label_placeholder = wp_json_encode( __( 'Add label...', 'ran-octopus-forms' ) );
-		$submit_label      = esc_html__( 'Contact us', 'ran-octopus-forms' );
+		$name_label        = wp_json_encode( __( 'Name', 'ran-emailoctopus-jetpack-forms' ) );
+		$email_label       = wp_json_encode( __( 'Email', 'ran-emailoctopus-jetpack-forms' ) );
+		$message_label     = wp_json_encode( __( 'Message', 'ran-emailoctopus-jetpack-forms' ) );
+		$newsletter_label  = wp_json_encode( __( 'Join our newsletter!', 'ran-emailoctopus-jetpack-forms' ) );
+		$label_placeholder = wp_json_encode( __( 'Add label...', 'ran-emailoctopus-jetpack-forms' ) );
+		$submit_label      = esc_html__( 'Contact us', 'ran-emailoctopus-jetpack-forms' );
 
 		return trim(
 			sprintf(

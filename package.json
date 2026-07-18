@@ -1,24 +1,23 @@
 {
-	"name": "ran-octopus-forms",
+	"name": "ran-emailoctopus-jetpack-forms",
 	"version": "1.0.0",
 	"private": true,
-	"description": "WordPress contact-form integrations for Jetpack Forms, EmailOctopus, and Cloudflare Turnstile.",
+	"description": "Connects opted-in Jetpack Forms submissions to EmailOctopus.",
 	"author": "bnjmnrsh",
 	"license": "GPL-2.0-or-later",
 	"keywords": [
 		"wordpress",
 		"forms",
 		"jetpack",
-		"emailoctopus",
-		"turnstile"
+		"emailoctopus"
 	],
-	"homepage": "https://github.com/RocketsAreNostalgic/ran-octopus-forms",
+	"homepage": "https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms.git"
+		"url": "https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms.git"
 	},
 	"bugs": {
-		"url": "https://github.com/RocketsAreNostalgic/ran-octopus-forms"
+		"url": "https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms"
 	},
 	"devDependencies": {
 		"@wordpress/scripts": "^30.25.0",
@@ -35,7 +34,7 @@
 		"lint:pkg-json": "wp-scripts lint-pkg-json",
 		"check": "pnpm run lint:pkg-json && pnpm run lint:js && pnpm run lint:css && pnpm run format:check",
 		"make-pot": "node scripts/make-pot.mjs",
-		"check:generated": "pnpm make-pot && git diff --exit-code -- languages/ran-octopus-forms.pot",
+		"check:generated": "pnpm make-pot && git diff --exit-code -- languages/ran-emailoctopus-jetpack-forms.pot",
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
 		"release": "sh scripts/build-release.sh",

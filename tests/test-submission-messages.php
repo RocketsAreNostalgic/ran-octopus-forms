@@ -2,19 +2,19 @@
 /**
  * Integration coverage for EmailOctopus outcome messages.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\EmailOctopusSubscriber;
-use RAN\OctopusForms\JetpackForms;
-use RAN\OctopusForms\Patterns;
-use RAN\OctopusForms\Settings;
-use RAN\OctopusForms\SubmissionMessages;
+use RAN\EmailOctopusJetpackForms\EmailOctopusSubscriber;
+use RAN\EmailOctopusJetpackForms\JetpackForms;
+use RAN\EmailOctopusJetpackForms\Patterns;
+use RAN\EmailOctopusJetpackForms\Settings;
+use RAN\EmailOctopusJetpackForms\SubmissionMessages;
 
 /**
  * Ensure provider outcomes reach the configured success page safely.
  */
-class RAN_Octopus_Forms_Submission_Messages_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted state.
 	 *
@@ -26,6 +26,16 @@ class RAN_Octopus_Forms_Submission_Messages_Test extends WP_UnitTestCase {
 		delete_option( 'emailoctopus_api_key' );
 		$_GET  = array();
 		$_POST = array();
+	}
+
+	/**
+	 * Existing success pages keep working after the public rename.
+	 *
+	 * @return void
+	 */
+	public function test_legacy_and_canonical_shortcodes_are_registered() {
+		$this->assertTrue( shortcode_exists( SubmissionMessages::SHORTCODE ) );
+		$this->assertTrue( shortcode_exists( SubmissionMessages::LEGACY_SHORTCODE ) );
 	}
 
 	/**

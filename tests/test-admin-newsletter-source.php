@@ -2,16 +2,16 @@
 /**
  * Integration coverage for newsletter opt-in source settings.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\Admin;
-use RAN\OctopusForms\Settings;
+use RAN\EmailOctopusJetpackForms\Admin;
+use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
  * Ensure newsletter opt-in sources are limited to affirmative controls.
  */
-class RAN_Octopus_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted integration state.
 	 *
@@ -221,8 +221,8 @@ class RAN_Octopus_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
 	 */
 	public function stale_source_provider() {
 		return array(
-			'email source'      => array( 'ran-octopus-forms-emailoctopus-email-source', 'emailoctopus_email_source', 'former_email', 'email_address' ),
-			'newsletter source' => array( 'ran-octopus-forms-newsletter-source', 'newsletter_source', 'former_newsletter_opt_in', 'newsletter_opt_in' ),
+			'email source'      => array( 'ran-emailoctopus-jetpack-forms-emailoctopus-email-source', 'emailoctopus_email_source', 'former_email', 'email_address' ),
+			'newsletter source' => array( 'ran-emailoctopus-jetpack-forms-newsletter-source', 'newsletter_source', 'former_newsletter_opt_in', 'newsletter_opt_in' ),
 		);
 	}
 
@@ -261,7 +261,7 @@ class RAN_Octopus_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
 	 * @return string
 	 */
 	private function get_email_source_select_markup( $markup ) {
-		return $this->get_source_select_markup( $markup, 'ran-octopus-forms-emailoctopus-email-source' );
+		return $this->get_source_select_markup( $markup, 'ran-emailoctopus-jetpack-forms-emailoctopus-email-source' );
 	}
 
 	/**
@@ -271,7 +271,7 @@ class RAN_Octopus_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
 	 * @return string
 	 */
 	private function get_newsletter_source_select_markup( $markup ) {
-		return $this->get_source_select_markup( $markup, 'ran-octopus-forms-newsletter-source' );
+		return $this->get_source_select_markup( $markup, 'ran-emailoctopus-jetpack-forms-newsletter-source' );
 	}
 
 	/**
@@ -302,7 +302,7 @@ class RAN_Octopus_Forms_Admin_Newsletter_Source_Test extends WP_UnitTestCase {
 	 */
 	private function get_source_field_markup( $markup, $select_id ) {
 		$matched = preg_match(
-			'#<div class="ran-octopus-forms-field">\s*<label for="' . preg_quote( $select_id, '#' ) . '">.*?</label>(.*?)</div>#s',
+			'#<div class="ran-emailoctopus-jetpack-forms-field">\s*<label for="' . preg_quote( $select_id, '#' ) . '">.*?</label>(.*?)</div>#s',
 			$markup,
 			$matches
 		);

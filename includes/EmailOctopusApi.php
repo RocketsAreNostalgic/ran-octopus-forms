@@ -2,10 +2,10 @@
 /**
  * EmailOctopus API helpers.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -40,7 +40,7 @@ final class EmailOctopusApi {
 		$api_key = self::get_api_key();
 
 		if ( '' === $api_key ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_api_key', __( 'EmailOctopus API key is missing.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_api_key', __( 'EmailOctopus API key is missing.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$forms = self::api_get( '/forms', array( 'api_key' => $api_key ) );
@@ -50,7 +50,7 @@ final class EmailOctopusApi {
 		}
 
 		if ( ! is_array( $forms ) ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_forms', __( 'EmailOctopus returned an unexpected forms response.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_forms', __( 'EmailOctopus returned an unexpected forms response.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$normalized = array();
@@ -100,7 +100,7 @@ final class EmailOctopusApi {
 		$form_id = sanitize_text_field( $form_id );
 
 		if ( '' === $form_id ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_form_id', __( 'EmailOctopus form ID is missing.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_form_id', __( 'EmailOctopus form ID is missing.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		return self::api_get(
@@ -119,7 +119,7 @@ final class EmailOctopusApi {
 		$list_id = sanitize_text_field( $list_id );
 
 		if ( '' === $list_id ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_list_id', __( 'EmailOctopus list ID is missing.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_list_id', __( 'EmailOctopus list ID is missing.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		return self::api_get(
@@ -137,7 +137,7 @@ final class EmailOctopusApi {
 	 */
 	private static function api_get( $path, $query ) {
 		if ( empty( $query['api_key'] ) ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_api_key', __( 'EmailOctopus API key is missing.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_api_key', __( 'EmailOctopus API key is missing.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$url       = add_query_arg( $query, self::API_BASE . $path );
@@ -163,13 +163,13 @@ final class EmailOctopusApi {
 		}
 
 		if ( 200 !== wp_remote_retrieve_response_code( $response ) ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_status', __( 'EmailOctopus API returned an unexpected status.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_status', __( 'EmailOctopus API returned an unexpected status.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$body = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( ! is_array( $body ) ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_json', __( 'EmailOctopus API returned invalid JSON.', 'ran-octopus-forms' ) );
+			return new \WP_Error( 'ran_octopus_forms_emailoctopus_bad_json', __( 'EmailOctopus API returned invalid JSON.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		if ( isset( $body['error'] ) ) {

@@ -2,10 +2,10 @@
 /**
  * Visitor-facing EmailOctopus subscription outcome messages.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,7 +18,12 @@ final class SubmissionMessages {
 	/**
 	 * Shortcode used on the configured success page.
 	 */
-	const SHORTCODE = 'ran_octopus_forms_subscription_message';
+	const SHORTCODE = 'ran_emailoctopus_jetpack_forms_subscription_message';
+
+	/**
+	 * Previous shortcode retained for existing success-page content.
+	 */
+	const LEGACY_SHORTCODE = 'ran_octopus_forms_subscription_message';
 
 	/**
 	 * Query argument carrying a one-time result token.
@@ -37,6 +42,7 @@ final class SubmissionMessages {
 	 */
 	public static function register() {
 		add_shortcode( self::SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
+		add_shortcode( self::LEGACY_SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
 		add_filter( 'render_block_core/shortcode', array( __CLASS__, 'render_shortcode_block' ), 10, 2 );
 		add_action( 'template_redirect', array( __CLASS__, 'disable_cache_for_result' ) );
 	}
@@ -92,7 +98,7 @@ final class SubmissionMessages {
 		}
 
 		return sprintf(
-			'<p class="ran-octopus-forms-subscription-message" role="status">%s</p>',
+			'<p class="ran-emailoctopus-jetpack-forms-subscription-message ran-octopus-forms-subscription-message" role="status">%s</p>',
 			esc_html( $message )
 		);
 	}
@@ -111,7 +117,7 @@ final class SubmissionMessages {
 
 		$shortcode_content = isset( $block['innerHTML'] ) && is_string( $block['innerHTML'] ) ? $block['innerHTML'] : $block_content;
 
-		if ( ! has_shortcode( $shortcode_content, self::SHORTCODE ) && ! has_shortcode( $block_content, self::SHORTCODE ) ) {
+		if ( ! has_shortcode( $shortcode_content, self::SHORTCODE ) && ! has_shortcode( $block_content, self::SHORTCODE ) && ! has_shortcode( $shortcode_content, self::LEGACY_SHORTCODE ) && ! has_shortcode( $block_content, self::LEGACY_SHORTCODE ) ) {
 			return $block_content;
 		}
 

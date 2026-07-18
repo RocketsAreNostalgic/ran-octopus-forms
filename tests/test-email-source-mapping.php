@@ -2,16 +2,16 @@
 /**
  * Integration coverage for explicit EmailOctopus source mapping.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\OctopusForms\EmailOctopusFieldMapper;
-use RAN\OctopusForms\Settings;
+use RAN\EmailOctopusJetpackForms\EmailOctopusFieldMapper;
+use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
  * Ensure subscriptions use only an explicit email source.
  */
-class RAN_Octopus_Forms_Email_Source_Mapping_Test extends WP_UnitTestCase {
+class RAN_EmailOctopus_Jetpack_Forms_Email_Source_Mapping_Test extends WP_UnitTestCase {
 	/**
 	 * Reset persisted integration state.
 	 *

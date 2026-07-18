@@ -1,11 +1,11 @@
 <?php
 /**
- * RAN Octopus Forms settings.
+ * RAN EmailOctopus for Jetpack Forms settings.
  *
- * @package RAN_Octopus_Forms
+ * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-namespace RAN\OctopusForms;
+namespace RAN\EmailOctopusJetpackForms;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -18,7 +18,12 @@ final class Settings {
 	/**
 	 * Option name.
 	 */
-	const OPTION_NAME = 'ran_octopus_forms_settings';
+	const OPTION_NAME = 'ran_emailoctopus_jetpack_forms_settings';
+
+	/**
+	 * Previous bundled-plugin option, retained as a read-only migration source.
+	 */
+	const PREVIOUS_OPTION_NAME = 'ran_octopus_forms_settings';
 
 	/**
 	 * Previous option name, retained only for the one-time settings migration.
@@ -38,27 +43,7 @@ final class Settings {
 	/**
 	 * Option that records the completed portability upgrade.
 	 */
-	const VERSION_OPTION = 'ran_octopus_forms_version';
-
-	/**
-	 * Cloudflare's always-pass visible test site key.
-	 */
-	const TURNSTILE_TEST_SITE_KEY = '1x00000000000000000000AA';
-
-	/**
-	 * Cloudflare's always-pass test secret key.
-	 */
-	const TURNSTILE_TEST_SECRET_KEY = '1x0000000000000000000000000000000AA';
-
-	/**
-	 * Cloudflare's always-fail visible test site key.
-	 */
-	const TURNSTILE_FAIL_TEST_SITE_KEY = '2x00000000000000000000AB';
-
-	/**
-	 * Cloudflare's always-fail test secret key.
-	 */
-	const TURNSTILE_FAIL_TEST_SECRET_KEY = '2x0000000000000000000000000000000AA';
+	const VERSION_OPTION = 'ran_emailoctopus_jetpack_forms_version';
 
 	/**
 	 * Get default settings.
@@ -73,19 +58,16 @@ final class Settings {
 			'emailoctopus_list_id'            => '',
 			'emailoctopus_email_source'       => '',
 			'emailoctopus_field_map'          => array(),
-			'emailoctopus_pending_message'    => __( 'There’s one more step: please confirm your subscription using the email we’ve just sent you.', 'ran-octopus-forms' ),
-			'emailoctopus_subscribed_message' => __( 'You’re now subscribed to our newsletter.', 'ran-octopus-forms' ),
-			'emailoctopus_existing_message'   => __( 'This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier.', 'ran-octopus-forms' ),
-			'emailoctopus_failure_message'    => __( 'Your message has been sent, but we could not add you to the newsletter. Please try again later.', 'ran-octopus-forms' ),
+			'emailoctopus_pending_message'    => __( 'There’s one more step: please confirm your subscription using the email we’ve just sent you.', 'ran-emailoctopus-jetpack-forms' ),
+			'emailoctopus_subscribed_message' => __( 'You’re now subscribed to our newsletter.', 'ran-emailoctopus-jetpack-forms' ),
+			'emailoctopus_existing_message'   => __( 'This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier.', 'ran-emailoctopus-jetpack-forms' ),
+			'emailoctopus_failure_message'    => __( 'Your message has been sent, but we could not add you to the newsletter. Please try again later.', 'ran-emailoctopus-jetpack-forms' ),
 			'newsletter_source'               => '',
-			'turnstile_enabled'               => 0,
-			'turnstile_site_key'              => '',
-			'turnstile_secret_key'            => '',
 		);
 	}
 
 	/**
-	 * Copy the existing RAN Forms settings into the renamed option once.
+	 * Copy EmailOctopus settings from an earlier plugin option once.
 	 *
 	 * Keeping the original option intact gives a safe rollback path while the
 	 * renamed plugin uses its own settings key from this point forward.
@@ -97,10 +79,16 @@ final class Settings {
 			return;
 		}
 
-		$legacy_settings = get_option( self::LEGACY_OPTION_NAME, false );
+		foreach ( array( self::PREVIOUS_OPTION_NAME, self::LEGACY_OPTION_NAME ) as $legacy_option_name ) {
+			$legacy_settings = get_option( $legacy_option_name, false );
 
-		if ( is_array( $legacy_settings ) ) {
-			add_option( self::OPTION_NAME, $legacy_settings, '', false );
+			if ( ! is_array( $legacy_settings ) ) {
+				continue;
+			}
+
+			$emailoctopus_settings = array_intersect_key( $legacy_settings, self::get_defaults() );
+			add_option( self::OPTION_NAME, $emailoctopus_settings, '', false );
+			return;
 		}
 	}
 
@@ -115,14 +103,14 @@ final class Settings {
 	public static function upgrade() {
 		self::migrate_legacy_settings();
 
-		if ( ! version_compare( (string) get_option( self::VERSION_OPTION, '0.0.0' ), RAN_OCTOPUS_FORMS_VERSION, '<' ) ) {
+		if ( ! version_compare( (string) get_option( self::VERSION_OPTION, '0.0.0' ), RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION, '<' ) ) {
 			return;
 		}
 
 		$stored = get_option( self::OPTION_NAME, false );
 
 		if ( ! is_array( $stored ) ) {
-			update_option( self::VERSION_OPTION, RAN_OCTOPUS_FORMS_VERSION, false );
+			update_option( self::VERSION_OPTION, RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION, false );
 			return;
 		}
 
@@ -151,7 +139,7 @@ final class Settings {
 		}
 
 		self::mark_legacy_target_form( absint( $stored['contact_page_id'] ?? 0 ) );
-		update_option( self::VERSION_OPTION, RAN_OCTOPUS_FORMS_VERSION, false );
+		update_option( self::VERSION_OPTION, RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION, false );
 	}
 
 	/**
@@ -213,7 +201,7 @@ final class Settings {
 					'ran_octopus_forms_invalid_contact_page',
 					sprintf(
 						/* translators: %d: number of Jetpack contact forms found. */
-						__( 'Cannot save settings: the selected contact page contains %d Jetpack contact forms. RAN Octopus Forms requires exactly one.', 'ran-octopus-forms' ),
+						__( 'Cannot save settings: the selected contact page contains %d Jetpack contact forms. RAN EmailOctopus for Jetpack Forms requires exactly one.', 'ran-emailoctopus-jetpack-forms' ),
 						$contact_form_count
 					),
 					'error'
@@ -245,17 +233,6 @@ final class Settings {
 		$settings['emailoctopus_existing_message']   = sanitize_textarea_field( $input['emailoctopus_existing_message'] ?? $settings['emailoctopus_existing_message'] );
 		$settings['emailoctopus_failure_message']    = sanitize_textarea_field( $input['emailoctopus_failure_message'] ?? $settings['emailoctopus_failure_message'] );
 		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? $current['newsletter_source'] ?? '' ) );
-		$settings['turnstile_enabled']               = empty( $input['turnstile_enabled'] ) ? 0 : 1;
-		$settings['turnstile_site_key']              = sanitize_text_field( $input['turnstile_site_key'] ?? '' );
-
-		$secret_key                       = sanitize_text_field( $input['turnstile_secret_key'] ?? '' );
-		$settings['turnstile_secret_key'] = '' === $secret_key ? (string) ( $current['turnstile_secret_key'] ?? '' ) : $secret_key;
-
-		if ( ! empty( $input['turnstile_setup_local_dev'] ) ) {
-			$settings['turnstile_enabled']    = 1;
-			$settings['turnstile_site_key']   = self::TURNSTILE_TEST_SITE_KEY;
-			$settings['turnstile_secret_key'] = self::TURNSTILE_TEST_SECRET_KEY;
-		}
 
 		self::warn_about_invalid_source_mappings( $settings, $contact_page_id );
 
@@ -285,7 +262,7 @@ final class Settings {
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_octopus_forms_invalid_email_source',
-				__( 'EmailOctopus email source needs attention: select a current email field before subscriptions can run.', 'ran-octopus-forms' ),
+				__( 'EmailOctopus email source needs attention: select a current email field before subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
 				'warning'
 			);
 		}
@@ -294,7 +271,7 @@ final class Settings {
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_octopus_forms_invalid_newsletter_source',
-				__( 'Newsletter opt-in source needs attention: select a current checkbox or consent field before subscriptions can run.', 'ran-octopus-forms' ),
+				__( 'Newsletter opt-in source needs attention: select a current checkbox or consent field before subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
 				'warning'
 			);
 		}
@@ -595,7 +572,14 @@ final class Settings {
 		 *
 		 * @param string $form_id EmailOctopus form ID.
 		 */
-		return (string) apply_filters( 'ran_octopus_forms_emailoctopus_form_id', $form_id );
+		$form_id = apply_filters_deprecated(
+			'ran_octopus_forms_emailoctopus_form_id',
+			array( $form_id ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_emailoctopus_form_id'
+		);
+
+		return (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_form_id', $form_id );
 	}
 
 	/**
@@ -604,7 +588,9 @@ final class Settings {
 	 * @return string
 	 */
 	public static function get_emailoctopus_list_id() {
-		if ( defined( 'RAN_OCTOPUS_FORMS_EMAILOCTOPUS_LIST_ID' ) ) {
+		if ( defined( 'RAN_EMAILOCTOPUS_JETPACK_FORMS_EMAILOCTOPUS_LIST_ID' ) ) {
+			$list_id = constant( 'RAN_EMAILOCTOPUS_JETPACK_FORMS_EMAILOCTOPUS_LIST_ID' );
+		} elseif ( defined( 'RAN_OCTOPUS_FORMS_EMAILOCTOPUS_LIST_ID' ) ) {
 			$list_id = constant( 'RAN_OCTOPUS_FORMS_EMAILOCTOPUS_LIST_ID' );
 		} elseif ( defined( 'RAN_FORMS_EMAILOCTOPUS_LIST_ID' ) ) {
 			$list_id = constant( 'RAN_FORMS_EMAILOCTOPUS_LIST_ID' );
@@ -618,7 +604,14 @@ final class Settings {
 		 *
 		 * @param string $list_id EmailOctopus list ID.
 		 */
-		return (string) apply_filters( 'ran_octopus_forms_emailoctopus_list_id', $list_id );
+		$list_id = apply_filters_deprecated(
+			'ran_octopus_forms_emailoctopus_list_id',
+			array( $list_id ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_emailoctopus_list_id'
+		);
+
+		return (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_list_id', $list_id );
 	}
 
 	/**
@@ -635,7 +628,14 @@ final class Settings {
 		 *
 		 * @param string $url Success URL.
 		 */
-		return (string) apply_filters( 'ran_octopus_forms_contact_success_url', $url ? $url : '' );
+		$url = apply_filters_deprecated(
+			'ran_octopus_forms_contact_success_url',
+			array( $url ? $url : '' ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_contact_success_url'
+		);
+
+		return (string) apply_filters( 'ran_emailoctopus_jetpack_forms_contact_success_url', $url );
 	}
 
 	/**
@@ -651,7 +651,14 @@ final class Settings {
 		 *
 		 * @param string $source Normalized Jetpack source key.
 		 */
-		return (string) apply_filters( 'ran_octopus_forms_newsletter_source', $source );
+		$source = apply_filters_deprecated(
+			'ran_octopus_forms_newsletter_source',
+			array( $source ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_newsletter_source'
+		);
+
+		return (string) apply_filters( 'ran_emailoctopus_jetpack_forms_newsletter_source', $source );
 	}
 
 	/**
@@ -669,7 +676,14 @@ final class Settings {
 		 *
 	 * @param string $source Normalized Jetpack source key. Empty means unconfigured.
 		 */
-		return (string) apply_filters( 'ran_octopus_forms_emailoctopus_email_source', $source );
+		$source = apply_filters_deprecated(
+			'ran_octopus_forms_emailoctopus_email_source',
+			array( $source ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_emailoctopus_email_source'
+		);
+
+		return (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_email_source', $source );
 	}
 
 	/**
@@ -707,110 +721,13 @@ final class Settings {
 		 *
 		 * @param array<string,array<string,string>> $field_map Field map.
 		 */
-		return (array) apply_filters( 'ran_octopus_forms_emailoctopus_field_map', $field_map );
-	}
+		$field_map = apply_filters_deprecated(
+			'ran_octopus_forms_emailoctopus_field_map',
+			array( $field_map ),
+			'1.1.0',
+			'ran_emailoctopus_jetpack_forms_emailoctopus_field_map'
+		);
 
-	/**
-	 * Whether Turnstile is enabled.
-	 *
-	 * @return bool
-	 */
-	public static function is_turnstile_enabled() {
-		return (bool) self::get( 'turnstile_enabled' );
-	}
-
-	/**
-	 * Get the current WordPress environment type.
-	 *
-	 * @return string
-	 */
-	public static function get_environment_type() {
-		$environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
-
-		/**
-		 * Filters the environment type used by RAN Octopus Forms safety checks.
-		 *
-		 * @param string $environment Environment type.
-		 */
-		return (string) apply_filters( 'ran_octopus_forms_environment_type', $environment );
-	}
-
-	/**
-	 * Whether WordPress is running as production.
-	 *
-	 * @return bool
-	 */
-	public static function is_production_environment() {
-		return 'production' === self::get_environment_type();
-	}
-
-	/**
-	 * Get Turnstile site key.
-	 *
-	 * @return string
-	 */
-	public static function get_turnstile_site_key() {
-		if ( defined( 'RAN_OCTOPUS_FORMS_TURNSTILE_SITE_KEY' ) ) {
-			$key = constant( 'RAN_OCTOPUS_FORMS_TURNSTILE_SITE_KEY' );
-		} elseif ( defined( 'RAN_FORMS_TURNSTILE_SITE_KEY' ) ) {
-			$key = constant( 'RAN_FORMS_TURNSTILE_SITE_KEY' );
-		} else {
-			$key = (string) self::get( 'turnstile_site_key' );
-		}
-
-		return is_string( $key ) ? $key : '';
-	}
-
-	/**
-	 * Get Turnstile secret key.
-	 *
-	 * @return string
-	 */
-	public static function get_turnstile_secret_key() {
-		if ( defined( 'RAN_OCTOPUS_FORMS_TURNSTILE_SECRET_KEY' ) ) {
-			$key = constant( 'RAN_OCTOPUS_FORMS_TURNSTILE_SECRET_KEY' );
-		} elseif ( defined( 'RAN_FORMS_TURNSTILE_SECRET_KEY' ) ) {
-			$key = constant( 'RAN_FORMS_TURNSTILE_SECRET_KEY' );
-		} else {
-			$key = (string) self::get( 'turnstile_secret_key' );
-		}
-
-		return is_string( $key ) ? $key : '';
-	}
-
-	/**
-	 * Whether Turnstile has both required keys.
-	 *
-	 * @return bool
-	 */
-	public static function has_turnstile_keys() {
-		return '' !== self::get_turnstile_site_key() && '' !== self::get_turnstile_secret_key();
-	}
-
-	/**
-	 * Whether configured Turnstile keys are Cloudflare test keys.
-	 *
-	 * @return bool
-	 */
-	public static function is_turnstile_test_key_pair() {
-		return self::TURNSTILE_TEST_SITE_KEY === self::get_turnstile_site_key() && self::TURNSTILE_TEST_SECRET_KEY === self::get_turnstile_secret_key();
-	}
-
-	/**
-	 * Whether test keys are blocked in the current environment.
-	 *
-	 * @return bool
-	 */
-	public static function blocks_turnstile_test_keys() {
-		return self::is_production_environment() && self::is_turnstile_test_key_pair();
-	}
-
-	/**
-	 * Whether Turnstile can be rendered and validated in this environment.
-	 *
-	 * @return bool
-	 */
-	public static function can_use_turnstile() {
-		return self::is_turnstile_enabled() && self::has_turnstile_keys() && ! self::blocks_turnstile_test_keys();
+		return (array) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_field_map', $field_map );
 	}
 }

@@ -1,8 +1,9 @@
 # Pre-release checklist
 
-Use this as the final outstanding-work list before publishing RAN Octopus Forms
-to WordPress.org. The plugin already has release guidance in `RELEASE.md`; this
-file separates the remaining publish blockers from the normal release steps.
+Use this as the final outstanding-work list before publishing RAN EmailOctopus
+for Jetpack Forms to WordPress.org. The plugin already has release guidance in
+`RELEASE.md`; this file separates the remaining publish blockers from the
+normal release steps.
 
 ## Publish blockers
 
@@ -11,7 +12,8 @@ file separates the remaining publish blockers from the normal release steps.
       replacement files now live under `wordpress-org/assets/`.
 - [ ] Review and commit the current `RELEASE.md` change so the release handoff
       matches the new `wordpress-org/assets/` layout.
-- [ ] Confirm the WordPress.org plugin slug `ran-octopus-forms`, contributor
+- [ ] Confirm the WordPress.org plugin slug
+      `ran-emailoctopus-jetpack-forms`, contributor
       account, support ownership, and public repository links are final.
 - [ ] Confirm the banner and icon files in `wordpress-org/assets/` are
       licence-cleared, project-owned, and approved for public directory use.
@@ -20,20 +22,20 @@ file separates the remaining publish blockers from the normal release steps.
       `screenshot-1.png` for settings/integration status and `screenshot-2.png`
       for the Contact Newsletter Form pattern.
 - [ ] Review `readme.txt` against the current WordPress.org readme validator,
-      including tags, Jetpack/EmailOctopus/Cloudflare external-service
+      including tags, Jetpack/EmailOctopus external-service
       disclosures, stable tag `1.0.0`, screenshots, and the declared
       `Tested up to` value.
 - [ ] Run the full local release gate from a clean worktree:
 
-      ```sh
-      pnpm install --frozen-lockfile
-      composer install
-      pnpm check
-      pnpm make-pot
-      composer run phpcs
-      WP_TESTS_DIR=/path/to/wordpress-tests-lib composer test
-      pnpm release
-      ```
+```sh
+pnpm install --frozen-lockfile
+composer install
+pnpm check
+pnpm make-pot
+composer run phpcs
+WP_TESTS_DIR=/path/to/wordpress-tests-lib composer test
+pnpm release
+```
 
 - [ ] Run Plugin Check against the unpacked release ZIP, matching the
       `.github/workflows/quality.yml` release job.
@@ -41,9 +43,8 @@ file separates the remaining publish blockers from the normal release steps.
       and verify activation, settings save, pattern insertion, single-form
       marker behaviour, success redirect, normal Jetpack submission behaviour,
       and upgrade handling for zero/one/multiple form cases.
-- [ ] Verify EmailOctopus opt-in mapping and Cloudflare Turnstile behaviour with
-      real or sandbox provider credentials before making the public service
-      claims final.
+- [ ] Verify EmailOctopus opt-in mapping with real or sandbox provider
+      credentials before making the public service claims final.
 - [ ] Confirm the release ZIP is built only from `release-contents.txt` and does
       not include development-only files or WordPress.org directory assets.
 - [ ] Copy the validated release contents to WordPress.org SVN `trunk`, tag
@@ -53,12 +54,14 @@ file separates the remaining publish blockers from the normal release steps.
 ## Translation readiness
 
 - [ ] Confirm all user-facing PHP strings are wrapped in the appropriate
-      WordPress i18n function with the `ran-octopus-forms` text domain.
+      WordPress i18n function with the `ran-emailoctopus-jetpack-forms` text
+      domain.
       Serialized pattern labels must be translated before insertion into the
       pattern content.
 - [ ] Run the WordPress i18n coding-standard sniff:
       `composer run phpcs -- --sniffs=WordPress.WP.I18n`.
-- [ ] Regenerate `languages/ran-octopus-forms.pot` with `pnpm make-pot` after
+- [ ] Regenerate `languages/ran-emailoctopus-jetpack-forms.pot` with
+      `pnpm make-pot` after
       all final user-facing copy changes.
 - [ ] Confirm the POT file has no stale source references and is committed with
       the release.
@@ -71,7 +74,7 @@ file separates the remaining publish blockers from the normal release steps.
 
 ## Nice-to-have before first public launch
 
-- [ ] Capture a short manual QA note covering disabled-provider, EmailOctopus
-      enabled, Turnstile enabled, and both providers enabled states.
+- [ ] Capture a short manual QA note covering disabled and EmailOctopus-enabled
+      states.
 - [ ] Confirm the admin health/status wording is clear enough for a site owner
       without developer support.

@@ -4,7 +4,7 @@ set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 output=${1:-"$root/dist"}
-slug=ran-octopus-forms
+slug=ran-emailoctopus-jetpack-forms
 archive=$(sh "$root/scripts/release-archive-path.sh" "$output")
 stage=$(mktemp -d)
 
@@ -24,7 +24,7 @@ cd "$root"
 
 pnpm check
 find includes -name '*.php' -print0 | xargs -0 -n 1 php -l
-php -l ran-octopus-forms.php
+php -l ran-emailoctopus-jetpack-forms.php
 
 while IFS= read -r release_path; do
 	[ -n "$release_path" ] || continue
@@ -45,5 +45,5 @@ done < release-contents.txt
 )
 
 unzip -t "$archive" >/dev/null
-unzip -Z1 "$archive" | grep -qx "$slug/ran-octopus-forms.php"
+unzip -Z1 "$archive" | grep -qx "$slug/ran-emailoctopus-jetpack-forms.php"
 echo "Created and validated $archive"

@@ -1,18 +1,22 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const potPath = resolve(root, 'languages/ran-octopus-forms.pot');
+const potPath = resolve(root, 'languages/ran-emailoctopus-jetpack-forms.pot');
+const previousPot = existsSync(potPath) ? readFileSync(potPath, 'utf8') : '';
+const previousCreationDate = previousPot.match(
+	/^"POT-Creation-Date: [^\\n]+\\n"$/m
+)?.[0];
 const result = spawnSync(
 	'wp',
 	[
 		'i18n',
 		'make-pot',
 		'.',
-		'languages/ran-octopus-forms.pot',
-		'--domain=ran-octopus-forms',
+		'languages/ran-emailoctopus-jetpack-forms.pot',
+		'--domain=ran-emailoctopus-jetpack-forms',
 		'--exclude=node_modules,tests',
 	],
 	{ cwd: root, stdio: 'inherit' }
@@ -22,11 +26,19 @@ if (0 !== result.status) {
 	process.exit(result.status ?? 1);
 }
 
-const pot = readFileSync(potPath, 'utf8');
-const projectId = /^"Project-Id-Version: RAN Octopus Forms [^\\n]+\\n"$/m;
+let pot = readFileSync(potPath, 'utf8');
+const projectId =
+	/^"Project-Id-Version: RAN EmailOctopus for Jetpack Forms [^\\n]+\\n"$/m;
 
 if (!projectId.test(pot)) {
 	throw new Error('Unable to find the POT Project-Id-Version header.');
+}
+
+if (previousCreationDate) {
+	pot = pot.replace(
+		/^"POT-Creation-Date: [^\\n]+\\n"$/m,
+		previousCreationDate
+	);
 }
 
 writeFileSync(

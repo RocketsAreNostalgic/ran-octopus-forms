@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<ruleset name="RAN Octopus Forms">
+<ruleset name="RAN EmailOctopus for Jetpack Forms">
 	<description>WordPress Coding Standards and PHP 8.0 compatibility checks.</description>
 	<file>includes</file>
-	<file>ran-octopus-forms.php</file>
+	<file>ran-emailoctopus-jetpack-forms.php</file>
 	<file>tests</file>
 	<exclude-pattern>vendor/*</exclude-pattern>
 	<arg name="basepath" value="."/>
@@ -14,7 +14,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="ran-octopus-forms"/>
+				<element value="ran-emailoctopus-jetpack-forms"/>
 			</property>
 		</properties>
 	</rule>
