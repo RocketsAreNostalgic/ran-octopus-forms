@@ -18,9 +18,9 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: ran-emailoctopus-jetpack-forms.php
-#: includes/Admin.php:48
-#: includes/Admin.php:49
-#: includes/Admin.php:203
+#: includes/Admin.php:42
+#: includes/Admin.php:43
+#: includes/Admin.php:90
 msgid "RAN EmailOctopus for Jetpack Forms"
 msgstr ""
 
@@ -44,31 +44,129 @@ msgstr ""
 msgid "https://github.com/RocketsAreNostalgic/"
 msgstr ""
 
-#: includes/Admin.php:83
+#: includes/Admin.php:54
 msgid "Settings"
 msgstr ""
 
-#: includes/Admin.php:106
+#: includes/Admin.php:65
 msgid "RAN GitHub"
 msgstr ""
 
-#: includes/Admin.php:204
-msgid "Configure the site-owned contact form integration, newsletter opt-in, and success redirect."
+#: includes/Admin.php:203
+msgid "This profile changed before the health check ran. Reload and try again."
 msgstr ""
 
-#: includes/Admin.php:206
-msgid "EmailOctopus API documentation"
+#: includes/Admin.php:233
+msgid "Each integration profile owns its saved Jetpack forms, EmailOctopus destination, mappings, success page and visitor messages."
 msgstr ""
 
-#: includes/Admin.php:212
-msgid "Contact flow"
+#: includes/Admin.php:234
+msgid "Add integration profile"
 msgstr ""
 
-#: includes/Admin.php:217
-msgid "Every selected saved form shares this EmailOctopus destination, field mapping, success page, and outcome messages wherever Jetpack reuses it."
+#: includes/Admin.php:246
+msgid "No integration profiles yet"
 msgstr ""
 
-#: includes/Admin.php:220
+#: includes/Admin.php:247
+msgid "Create a profile to assign saved Jetpack forms and configure their EmailOctopus behaviour."
+msgstr ""
+
+#: includes/Admin.php:255
+msgid "Profile"
+msgstr ""
+
+#: includes/Admin.php:256
+msgid "Assigned forms"
+msgstr ""
+
+#: includes/Admin.php:257
+#: includes/Admin.php:558
+#: includes/HealthCheck.php:288
+#: includes/HealthCheck.php:292
+#: includes/HealthCheck.php:298
+msgid "EmailOctopus destination"
+msgstr ""
+
+#: includes/Admin.php:258
+msgid "Coverage"
+msgstr ""
+
+#: includes/Admin.php:259
+msgid "Last health result"
+msgstr ""
+
+#: includes/Admin.php:260
+msgid "Actions"
+msgstr ""
+
+#. translators: 1: routing count, 2: selected count, 3: subscription count.
+#: includes/Admin.php:279
+#, php-format
+msgid "%1$d/%2$d routed; %3$d subscribed"
+msgstr ""
+
+#: includes/Admin.php:283
+msgid "Not checked"
+msgstr ""
+
+#: includes/Admin.php:283
+msgid "Stale"
+msgstr ""
+
+#: includes/Admin.php:296
+msgid "Edit"
+msgstr ""
+
+#: includes/Admin.php:309
+msgid "Delete"
+msgstr ""
+
+#: includes/Admin.php:323
+#: includes/Admin.php:411
+#: includes/Admin.php:442
+#: includes/Settings.php:851
+msgid "That integration profile no longer exists."
+msgstr ""
+
+#: includes/Admin.php:341
+msgid "Create integration profile"
+msgstr ""
+
+#: includes/Admin.php:341
+msgid "Step 1 — Identity and assignment"
+msgstr ""
+
+#: includes/Admin.php:342
+msgid "Save this stage to refresh the field choices in Step 2. It never clears behaviour saved below."
+msgstr ""
+
+#: includes/Admin.php:353
+msgid "Profile name"
+msgstr ""
+
+#: includes/Admin.php:358
+msgid "Save and refresh field choices"
+msgstr ""
+
+#: includes/Admin.php:374
+msgid "Step 2 — Behaviour"
+msgstr ""
+
+#: includes/Admin.php:375
+msgid "These choices are derived from the forms persisted in Step 1. This save never changes form ownership or the EmailOctopus destination."
+msgstr ""
+
+#: includes/Admin.php:381
+#: includes/HealthCheck.php:368
+msgid "Email source"
+msgstr ""
+
+#: includes/Admin.php:382
+msgid "Newsletter consent source"
+msgstr ""
+
+#: includes/Admin.php:385
 #: includes/HealthCheck.php:261
 #: includes/HealthCheck.php:267
 #: includes/HealthCheck.php:271
@@ -76,382 +174,222 @@ msgstr ""
 msgid "Success page"
 msgstr ""
 
-#: includes/Admin.php:222
-msgid "The success destination remains one page for every route that embeds any selected saved form."
+#: includes/Admin.php:392
+msgid "— Select a published page —"
 msgstr ""
 
-#: includes/Admin.php:228
-msgid "Newsletter outcome messages"
+#: includes/Admin.php:400
+msgid "Success-page shortcode"
 msgstr ""
 
-#: includes/Admin.php:230
-msgid "On the configured success page, add a Shortcode block and paste the shortcode below. The block displays the appropriate message only after a visitor has chosen the newsletter option."
+#: includes/Admin.php:401
+msgid "Save profile behaviour"
 msgstr ""
 
-#: includes/Admin.php:232
-msgid "Subscription message shortcode"
+#: includes/Admin.php:415
+msgid "None assigned"
 msgstr ""
 
-#: includes/Admin.php:234
-msgid "Copy and paste this into a Shortcode block on the selected success page."
-msgstr ""
-
-#: includes/Admin.php:237
-msgid "Customize subscription messages"
-msgstr ""
-
-#: includes/Admin.php:239
-msgid "These messages are shown to visitors according to the EmailOctopus subscription result."
-msgstr ""
-
-#: includes/Admin.php:240
-msgid "Confirmation required"
-msgstr ""
-
-#: includes/Admin.php:241
-msgid "Subscription complete"
-msgstr ""
-
-#: includes/Admin.php:242
-msgid "Existing email address"
-msgstr ""
-
-#: includes/Admin.php:243
-msgid "Subscription problem"
-msgstr ""
-
-#: includes/Admin.php:250
-msgid "EmailOctopus"
-msgstr ""
-
-#: includes/Admin.php:253
-msgid "EmailOctopus is optional and is currently disabled. Add an EmailOctopus API key and select a destination to enable opt-in subscriptions."
-msgstr ""
-
-#: includes/Admin.php:256
-#: includes/HealthCheck.php:288
-#: includes/HealthCheck.php:292
-#: includes/HealthCheck.php:298
-msgid "EmailOctopus destination"
-msgstr ""
-
-#: includes/Admin.php:260
-msgid "Email address source"
-msgstr ""
-
-#: includes/Admin.php:264
-msgid "Newsletter opt-in source"
-msgstr ""
-
-#: includes/Admin.php:268
-msgid "Custom field mapping"
-msgstr ""
-
-#: includes/Admin.php:274
-msgid "Save settings"
-msgstr ""
-
-#: includes/Admin.php:278
-msgid "Health check"
-msgstr ""
-
-#: includes/Admin.php:280
-msgid "Runs safe diagnostics without sending mail, creating feedback posts, or adding EmailOctopus contacts."
-msgstr ""
-
-#: includes/Admin.php:284
-msgid "Run health check"
-msgstr ""
-
-#: includes/Admin.php:300
-msgid "Sorry, you are not allowed to run this health check."
-msgstr ""
-
-#: includes/Admin.php:328
+#: includes/Admin.php:418
+#: includes/Admin.php:825
 msgid "Not configured"
 msgstr ""
 
-#: includes/Admin.php:355
-#: includes/Admin.php:365
-#: includes/Admin.php:403
-msgid "EmailOctopus routing is disabled."
+#: includes/Admin.php:422
+msgid "Delete integration profile"
 msgstr ""
 
-#. translators: 1: number of routable forms, 2: number of selected forms, 3: number of subscription-compatible forms.
-#: includes/Admin.php:386
-#: includes/Admin.php:410
+#. translators: %s: profile label.
+#: includes/Admin.php:423
 #, php-format
-msgid "Saved-form routing is active for %1$d of %2$d selected form(s); EmailOctopus subscriptions are active for %3$d."
+msgid "Delete “%s”? Its assigned forms will return to native Jetpack handling."
 msgstr ""
 
-#: includes/Admin.php:404
-msgid "None of the selected saved forms is currently routable."
+#. translators: %s: profile label.
+#: includes/Admin.php:424
+msgid "Assigned form IDs:"
 msgstr ""
 
-#: includes/Admin.php:419
-msgid "Isolated selected forms:"
+#: includes/Admin.php:425
+msgid "EmailOctopus destination:"
 msgstr ""
 
-#: includes/Admin.php:448
+#: includes/Admin.php:431
+msgid "Delete profile"
+msgstr ""
+
+#: includes/Admin.php:432
+msgid "Cancel"
+msgstr ""
+
+#. translators: %s: profile label.
+#: includes/Admin.php:450
+#, php-format
+msgid "Health — %s"
+msgstr ""
+
+#: includes/Admin.php:454
+msgid "State:"
+msgstr ""
+
+#: includes/Admin.php:462
+msgid "Back to integrations"
+msgstr ""
+
+#: includes/Admin.php:475
+msgid "Health"
+msgstr ""
+
+#: includes/Admin.php:504
+msgid "Saved Jetpack forms"
+msgstr ""
+
+#: includes/Admin.php:505
+msgid "One saved form can belong to only one profile. Clear every checkbox to leave this profile intentionally unassigned."
+msgstr ""
+
+#: includes/Admin.php:512
 #: includes/HealthCheck.php:313
 msgid "Untitled saved form"
 msgstr ""
 
-#: includes/Admin.php:449
-msgid "Unavailable saved form"
-msgstr ""
-
-#. translators: 1: saved Jetpack form title, 2: post ID.
-#: includes/Admin.php:453
+#. translators: %s: owning profile label.
+#: includes/Admin.php:520
 #, php-format
-msgid "%1$s (#%2$d)"
+msgid " — assigned to %s"
 msgstr ""
 
-#: includes/Admin.php:494
-msgid "Saved Jetpack forms"
-msgstr ""
-
-#. translators: %d: unavailable saved Jetpack form ID.
-#: includes/Admin.php:521
+#. translators: %d: unavailable stored form ID.
+#: includes/Admin.php:524
 #, php-format
-msgid "Unavailable saved form (#%d)"
+msgid "Unavailable selected form #%d — uncheck to remove"
 msgstr ""
 
-#: includes/Admin.php:530
-msgid "No published saved Jetpack forms were found. Create and publish a saved form in Jetpack, then return here."
+#: includes/Admin.php:529
+msgid "No published saved Jetpack forms are available."
 msgstr ""
 
-#: includes/Admin.php:544
-msgid "This Jetpack version cannot authoritatively identify a saved form after submission. Update Jetpack to a version that supports saved-form identity before enabling EmailOctopus routing."
-msgstr ""
-
+#. translators: 1: form name, 2: form ID.
 #: includes/Admin.php:546
-msgid "Select a published saved Jetpack form to enable EmailOctopus routing."
-msgstr ""
-
-#: includes/Admin.php:548
-msgid "The selected saved form was deleted or is unavailable. It remains selected for diagnostics but is isolated until you clear it or restore the saved form."
-msgstr ""
-
-#: includes/Admin.php:550
-msgid "The selected target is not a Jetpack saved form. It remains selected for diagnostics but is isolated until you clear it or select a published saved form."
-msgstr ""
-
-#: includes/Admin.php:552
-msgid "The selected saved Jetpack form is not published. It remains selected for diagnostics but is isolated until you publish it or clear the selection."
-msgstr ""
-
-#: includes/Admin.php:554
-msgid "The selected saved form does not contain exactly one Jetpack contact form. It remains selected for diagnostics but is isolated until you repair it or clear the selection."
-msgstr ""
-
-#: includes/Admin.php:556
-msgid "Saved-form targeting is unavailable. Review the health check and select a valid published Jetpack form."
-msgstr ""
-
-#: includes/Admin.php:593
-msgid "Destinations unavailable"
-msgstr ""
-
-#. translators: %s: EmailOctopus form ID.
-#: includes/Admin.php:598
 #, php-format
-msgid "Saved form ID: %s"
+msgid "Form: %1$s (%2$s)"
 msgstr ""
 
-#. translators: %s: EmailOctopus list ID.
-#: includes/Admin.php:602
+#. translators: 1: form name, 2: form ID.
+#. translators: 1: list name, 2: list ID.
+#: includes/Admin.php:546
+#: includes/Admin.php:549
+msgid "Untitled"
+msgstr ""
+
+#. translators: 1: list name, 2: list ID.
+#: includes/Admin.php:549
 #, php-format
-msgid "Saved list ID: %s"
+msgid "List: %1$s (%2$s)"
 msgstr ""
 
-#: includes/Admin.php:612
-msgid "Select an EmailOctopus destination"
+#. translators: %s: stored destination value.
+#: includes/Admin.php:555
+#, php-format
+msgid "Stored destination unavailable from API: %s"
 msgstr ""
 
-#: includes/Admin.php:614
-msgid "Forms"
+#: includes/Admin.php:560
+#: includes/Admin.php:579
+msgid "— Not configured —"
 msgstr ""
 
+#: includes/Admin.php:569
+msgid "The stored choice is preserved."
+msgstr ""
+
+#. translators: %s: stale source key.
+#: includes/Admin.php:583
+#: includes/Admin.php:630
+#, php-format
+msgid "Stored unavailable source: %s"
+msgstr ""
+
+#: includes/Admin.php:611
+msgid "Custom field mappings"
+msgstr ""
+
+#: includes/Admin.php:615
+msgid "Stored mappings remain available and will not be rewritten unless this stage is saved."
+msgstr ""
+
+#: includes/Admin.php:619
+msgid "No custom EmailOctopus fields are available for this destination."
+msgstr ""
+
+#: includes/Admin.php:624
+msgid "— Do not send —"
+msgstr ""
+
+#. translators: %s: EmailOctopus field tag.
 #: includes/Admin.php:636
-msgid "Direct list overrides"
-msgstr ""
-
-#: includes/Admin.php:663
-msgid "Choose the EmailOctopus form connected to the newsletter list. Use a direct list override only when a form is not the right source of truth."
-msgstr ""
-
-#: includes/Admin.php:665
-msgid "No EmailOctopus forms were returned for the configured API key."
-msgstr ""
-
-#. translators: %s: EmailOctopus form ID.
-#: includes/Admin.php:698
 #, php-format
-msgid "Saved form ID not returned by API: %s"
+msgid "Transform for %s"
+msgstr ""
+
+#: includes/Admin.php:651
+msgid "Pending confirmation message"
+msgstr ""
+
+#: includes/Admin.php:652
+msgid "Subscribed message"
+msgstr ""
+
+#: includes/Admin.php:653
+msgid "Existing subscriber message"
+msgstr ""
+
+#: includes/Admin.php:654
+msgid "Subscription failed message"
+msgstr ""
+
+#: includes/Admin.php:749
+msgid "Profile created. Dependent field choices have been refreshed from the saved forms."
+msgstr ""
+
+#: includes/Admin.php:750
+msgid "Identity and assignment saved. Dependent field choices have been refreshed."
+msgstr ""
+
+#: includes/Admin.php:751
+msgid "Profile behaviour saved."
+msgstr ""
+
+#: includes/Admin.php:752
+msgid "Profile deleted."
+msgstr ""
+
+#: includes/Admin.php:753
+msgid "Health check completed."
+msgstr ""
+
+#: includes/Admin.php:756
+msgid "The change was not saved."
+msgstr ""
+
+#: includes/Admin.php:784
+msgid "You are not allowed to manage integration profiles."
 msgstr ""
 
 #. translators: %s: EmailOctopus list ID.
-#: includes/Admin.php:703
+#: includes/Admin.php:819
 #, php-format
-msgid "Saved list ID not returned by API: %s"
+msgid "List %s"
 msgstr ""
 
-#. translators: %s: saved EmailOctopus destination identifier.
-#: includes/Admin.php:707
+#. translators: %s: EmailOctopus form ID.
+#: includes/Admin.php:823
 #, php-format
-msgid "Saved destination not returned by API: %s"
+msgid "Form %s"
 msgstr ""
 
-#: includes/Admin.php:717
-msgid "Untitled form"
-msgstr ""
-
-#: includes/Admin.php:718
-msgid "unknown type"
-msgstr ""
-
-#: includes/Admin.php:802
-msgid "No Jetpack opt-in fields detected"
-msgstr ""
-
-#: includes/Admin.php:804
-msgid "The selected saved forms have no shared checkbox or consent field that can record newsletter consent. Subscriptions are paused until their fields are made compatible and this setting is saved."
-msgstr ""
-
-#. translators: %s: unavailable Jetpack field key.
-#: includes/Admin.php:812
-#: includes/Admin.php:862
-#, php-format
-msgid "Unavailable source: %s"
-msgstr ""
-
-#: includes/Admin.php:815
-msgid "Choose a newsletter opt-in source"
-msgstr ""
-
-#. translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs.
-#: includes/Admin.php:824
-#, php-format
-msgid "The saved newsletter opt-in field \"%1$s\" is unavailable or incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement."
-msgstr ""
-
-#: includes/Admin.php:826
-msgid "Select a current checkbox or consent field before newsletter subscriptions can run."
-msgstr ""
-
-#: includes/Admin.php:828
-msgid "Choose the checkbox or consent field that records newsletter consent. An implicit Jetpack consent field means submitting the form subscribes the visitor."
-msgstr ""
-
-#: includes/Admin.php:852
-msgid "No Jetpack email fields detected"
-msgstr ""
-
-#: includes/Admin.php:854
-msgid "The selected saved forms have no shared email field. EmailOctopus subscriptions are paused until their fields are made compatible and this setting is saved."
-msgstr ""
-
-#: includes/Admin.php:865
-msgid "Choose an email source"
-msgstr ""
-
-#. translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs.
-#: includes/Admin.php:874
-#, php-format
-msgid "The saved email source \"%1$s\" is unavailable or incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement."
-msgstr ""
-
-#: includes/Admin.php:876
-msgid "Select a current email field before EmailOctopus subscriptions can run."
-msgstr ""
-
-#: includes/Admin.php:878
-msgid "RAN EmailOctopus for Jetpack Forms sends this field as EmailOctopus email_address. The source is always explicit; it is never auto-detected during a submission."
-msgstr ""
-
-#. translators: %s: Jetpack consent field label.
-#: includes/Admin.php:912
-#, php-format
-msgid "%1$s (consent checkbox)"
-msgstr ""
-
-#. translators: %s: Jetpack consent field label.
-#: includes/Admin.php:915
-#, php-format
-msgid "%1$s (consent; submitting this form subscribes the visitor)"
-msgstr ""
-
-#: includes/Admin.php:976
-msgid "Select an EmailOctopus destination, then save settings to map custom list fields."
-msgstr ""
-
-#: includes/Admin.php:997
-msgid "No unambiguous, type-compatible Jetpack fields are shared by every structurally valid selected saved form."
-msgstr ""
-
-#: includes/Admin.php:1007
-msgid "Map custom EmailOctopus fields"
-msgstr ""
-
-#: includes/Admin.php:1010
-msgid "The selected list does not expose custom fields beyond EmailAddress."
-msgstr ""
-
-#: includes/Admin.php:1012
-msgid "Only mapped fields are sent to EmailOctopus. Leave fields set to Do not send unless the mapping is intentional."
-msgstr ""
-
-#: includes/Admin.php:1016
-msgid "EmailOctopus field"
-msgstr ""
-
-#: includes/Admin.php:1017
-msgid "Type"
-msgstr ""
-
-#: includes/Admin.php:1018
-msgid "Jetpack source"
-msgstr ""
-
-#: includes/Admin.php:1019
-msgid "Transform"
-msgstr ""
-
-#: includes/Admin.php:1043
-msgid "Choose a replacement source"
-msgstr ""
-
-#: includes/Admin.php:1045
-msgid "Do not send"
-msgstr ""
-
-#. translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs.
-#: includes/Admin.php:1053
-#, php-format
-msgid "The saved Jetpack source \"%1$s\" is unavailable or type-incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement or Do not send."
-msgstr ""
-
-#. translators: %s: health-check status.
-#: includes/Admin.php:1142
-#, php-format
-msgid "Latest result: %s"
-msgstr ""
-
-#: includes/Admin.php:1146
-msgid "Check"
-msgstr ""
-
-#: includes/Admin.php:1147
-msgid "Status"
-msgstr ""
-
-#: includes/Admin.php:1148
-msgid "Detail"
-msgstr ""
-
-#: includes/Admin.php:1155
-msgid "FAIL"
+#: includes/Admin.php:831
+msgid "None"
 msgstr ""
 
 #: includes/EmailOctopusApi.php:43
@@ -711,10 +649,6 @@ msgstr ""
 msgid "No compatible checkbox or consent field is shared across every routable form."
 msgstr ""
 
-#: includes/HealthCheck.php:368
-msgid "Email source"
-msgstr ""
-
 #: includes/HealthCheck.php:372
 msgid "Consent source"
 msgstr ""
@@ -934,10 +868,6 @@ msgstr ""
 
 #: includes/Settings.php:842
 msgid "The stored integration settings do not use the current profile schema. Create a profile to replace them."
-msgstr ""
-
-#: includes/Settings.php:851
-msgid "That integration profile no longer exists."
 msgstr ""
 
 #: includes/Settings.php:860
