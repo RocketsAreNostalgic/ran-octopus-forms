@@ -57,30 +57,33 @@ EmailOctopus configuration.
 
 ## Option 2: Several compatible forms sharing one configuration
 
-Allow several explicitly marked Jetpack forms to use one shared EmailOctopus
-destination and field map.
+Implementation is governed by
+[`OPTION-2-IMPLEMENTATION.md`](OPTION-2-IMPLEMENTATION.md), which records the
+locked collection, compatibility, isolation, security, and acceptance contract.
+
+Allow several explicitly selected saved Jetpack forms to use one shared
+EmailOctopus destination and field map.
 
 ### Intended behaviour
 
-- Any deliberately marked form can participate, regardless of its route.
+- Any deliberately selected published saved form can participate, regardless
+  of its embedding route.
 - Multiple participating forms may appear on the same page.
-- A signed form marker distinguishes participating forms from neighbouring
-  Jetpack forms.
+- Automatically signed form context distinguishes participating forms from
+  neighbouring Jetpack forms.
 - The existing destination, mappings, success page, and messages remain
   global.
 
 ### Likely work
 
-- Remove the exactly-one-form runtime restriction while retaining explicit
-  ownership markers.
-- Resolve the submitted target from the existing signed saved-form context.
-- Allow pages and public posts to be used as configuration sources.
-- Make field discovery select the marked form rather than the first form in
-  the content tree.
+- Replace the scalar target with an explicitly selected saved-form collection.
+- Resolve each submitted target from the existing signed saved-form context.
+- Build shared mapping candidates from the compatible intersection of selected
+  saved-form definitions.
 - Validate the shared email, consent, and custom-field mappings against every
   participating form.
 - Report health-check results per participating form.
-- Cover multiple routes, multiple forms on one page, sibling unmarked forms,
+- Cover multiple routes, multiple forms on one page, sibling unselected forms,
   stale mappings, and invalid markers in integration tests.
 
 ### Complexity
@@ -159,6 +162,6 @@ Any future implementation should:
 
 ## Decision trigger
 
-Option 1 is the current recommendation. Before starting Option 2 or Option 3,
-capture the actual forms, field differences, destinations, and success flows
-that cannot be served by the preceding option.
+Option 2 is the active implementation. Before starting Option 3, capture the
+actual forms, destinations, mappings, and success flows that cannot share the
+single `default` profile.
