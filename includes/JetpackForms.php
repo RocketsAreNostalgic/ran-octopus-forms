@@ -16,15 +16,33 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class JetpackForms {
 	/**
-	 * Whether the current block render is the marked RAN form.
+	 * Existing marker field retained for cached and legacy forms.
+	 */
+	const TARGET_FIELD = 'ran_octopus_forms_target';
+
+	/**
+	 * Portable integration profile field.
+	 */
+	const PROFILE_FIELD = 'ran_emailoctopus_jetpack_forms_profile';
+
+	/**
+	 * Portable saved-form reference field.
+	 */
+	const FORM_REF_FIELD = 'ran_emailoctopus_jetpack_forms_form_ref';
+
+	/**
+	 * Active portable render context.
 	 *
-	 * Jetpack's AJAX filter does not provide a form ID. Restricting the value to
-	 * the server-side block-render window keeps other Jetpack forms on the same
-	 * page independent.
+	 * @var array{profile_id:string,form_ref:int,depth:int}|null
+	 */
+	private static $portable_render_context = null;
+
+	/**
+	 * Whether the current block render is the legacy marked RAN form.
 	 *
 	 * @var bool
 	 */
-	private static $rendering_target_form = false;
+	private static $rendering_legacy_target_form = false;
 
 	/**
 	 * Register hooks.
@@ -42,37 +60,69 @@ final class JetpackForms {
 	}
 
 	/**
-	 * Enter the marked form's server-side block-render context.
+	 * Enter the target form's server-side block-render context.
 	 *
-	 * @param string|null         $pre_render Existing pre-rendered content.
+	 * @param string|null         $pre_render   Existing pre-rendered content.
 	 * @param array<string,mixed> $parsed_block Parsed block data.
 	 * @return string|null
 	 */
 	public static function before_render_block( $pre_render, $parsed_block ) {
-		if ( ! is_admin() && is_page( Settings::get_contact_page_id() ) && Settings::is_target_contact_form_block( $parsed_block ) ) {
-			self::$rendering_target_form = true;
+		if ( is_admin() ) {
+			return $pre_render;
+		}
+
+		if ( IntegrationResolver::is_portable_available() ) {
+			$form_ref = self::get_block_form_ref( $parsed_block );
+
+			if ( 0 < $form_ref && IntegrationResolver::is_target_form_id( $form_ref ) ) {
+				$profile = IntegrationResolver::get_default_profile();
+
+				if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
+					++self::$portable_render_context['depth'];
+				} else {
+					self::$portable_render_context = array(
+						'profile_id' => $profile->get_id(),
+						'form_ref'   => $form_ref,
+						'depth'      => 1,
+					);
+				}
+			}
+
+			return $pre_render;
+		}
+
+		if ( self::uses_legacy_mode() && is_page( Settings::get_contact_page_id() ) && Settings::is_target_contact_form_block( $parsed_block ) ) {
+			self::$rendering_legacy_target_form = true;
 		}
 
 		return $pre_render;
 	}
 
 	/**
-	 * Leave the marked form's server-side block-render context.
+	 * Leave the target form's server-side block-render context.
 	 *
 	 * @param string              $block_content Rendered block content.
-	 * @param array<string,mixed> $parsed_block Parsed block data.
+	 * @param array<string,mixed> $parsed_block   Parsed block data.
 	 * @return string
 	 */
 	public static function after_render_block( $block_content, $parsed_block ) {
-		if ( Settings::is_target_contact_form_block( $parsed_block ) ) {
-			self::$rendering_target_form = false;
+		$form_ref = self::get_block_form_ref( $parsed_block );
+
+		if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
+			--self::$portable_render_context['depth'];
+
+			if ( 0 >= self::$portable_render_context['depth'] ) {
+				self::$portable_render_context = null;
+			}
+		} elseif ( self::uses_legacy_mode() && Settings::is_target_contact_form_block( $parsed_block ) ) {
+			self::$rendering_legacy_target_form = false;
 		}
 
 		return $block_content;
 	}
 
 	/**
-	 * Disable Jetpack's AJAX submission on the Contact Us form.
+	 * Disable Jetpack AJAX only for the resolved integration target.
 	 *
 	 * Jetpack returns JSON for AJAX submissions before its redirect hook runs,
 	 * so the success-page redirect requires a normal form post.
@@ -81,7 +131,7 @@ final class JetpackForms {
 	 * @return bool
 	 */
 	public static function disable_ajax_for_contact_form( $enabled ) {
-		if ( self::$rendering_target_form || self::is_target_submission() ) {
+		if ( null !== self::$portable_render_context || self::$rendering_legacy_target_form || self::is_target_submission() ) {
 			return false;
 		}
 
@@ -89,10 +139,7 @@ final class JetpackForms {
 	}
 
 	/**
-	 * Add a marker nonce to the one Jetpack form owned by this plugin.
-	 *
-	 * The marker allows submission hooks to distinguish the RAN form from other
-	 * Jetpack forms that may share the same page or form-ID prefix.
+	 * Add signed integration context to the resolved Jetpack form.
 	 *
 	 * @param string $form_html Rendered Jetpack form HTML.
 	 * @return string
@@ -102,58 +149,84 @@ final class JetpackForms {
 			return $form_html;
 		}
 
-		$marker = sprintf(
-			'<input type="hidden" name="ran_octopus_forms_target" value="%s" />',
-			esc_attr( wp_create_nonce( self::get_target_nonce_action() ) )
-		);
+		if ( null !== self::$portable_render_context ) {
+			$profile_id = self::$portable_render_context['profile_id'];
+			$form_ref   = self::$portable_render_context['form_ref'];
+			$marker     = sprintf(
+				'<input type="hidden" name="%1$s" value="%2$s" /><input type="hidden" name="%3$s" value="%4$d" /><input type="hidden" name="%5$s" value="%6$s" />',
+				esc_attr( self::PROFILE_FIELD ),
+				esc_attr( $profile_id ),
+				esc_attr( self::FORM_REF_FIELD ),
+				$form_ref,
+				esc_attr( self::TARGET_FIELD ),
+				esc_attr( wp_create_nonce( self::get_portable_nonce_action( $profile_id, $form_ref ) ) )
+			);
+		} else {
+			$marker = sprintf(
+				'<input type="hidden" name="%1$s" value="%2$s" />',
+				esc_attr( self::TARGET_FIELD ),
+				esc_attr( wp_create_nonce( self::get_legacy_nonce_action() ) )
+			);
+		}
 
 		return str_replace( '</form>', $marker . '</form>', $form_html );
 	}
 
 	/**
-	 * Whether rendered form markup belongs to this plugin's marked form.
+	 * Whether rendered form markup belongs to the configured integration.
 	 *
 	 * @param string $form_html Rendered Jetpack form HTML.
 	 * @return bool
 	 */
 	public static function is_target_form_html( $form_html ) {
-		return Settings::has_single_contact_form() && ( self::$rendering_target_form || false !== strpos( $form_html, Settings::TARGET_FORM_CLASS ) );
-	}
+		if ( IntegrationResolver::is_portable_available() ) {
+			return null !== self::$portable_render_context;
+		}
 
-	/**
-	 * Whether the request is a submission from the marked RAN form.
-	 *
-	 * @return bool
-	 */
-	public static function is_target_submission() {
-		if ( ! Settings::has_single_contact_form() || ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) || ! isset( $_POST['ran_octopus_forms_target'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verification occurs below.
+		if ( ! self::uses_legacy_mode() ) {
 			return false;
 		}
 
-		$nonce = sanitize_text_field( wp_unslash( $_POST['ran_octopus_forms_target'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- this is the nonce being verified.
-
-		return (bool) wp_verify_nonce( $nonce, self::get_target_nonce_action() );
+		return Settings::has_single_contact_form() && ( self::$rendering_legacy_target_form || false !== strpos( $form_html, Settings::TARGET_FORM_CLASS ) );
 	}
 
 	/**
-	 * Get the nonce action used exclusively for the configured form.
+	 * Whether the request is a signed submission from the configured form.
 	 *
-	 * @return string
+	 * Supplying a feedback post ID additionally verifies Jetpack's authoritative
+	 * saved-form identity before any external side effect or redirect.
+	 *
+	 * @param int $feedback_id Optional Jetpack feedback post ID.
+	 * @return bool
 	 */
-	private static function get_target_nonce_action() {
-		return 'ran_octopus_forms_target_' . Settings::get_contact_page_id();
+	public static function is_target_submission( $feedback_id = 0 ) {
+		$context = self::get_submitted_context();
+
+		if ( null === $context ) {
+			return false;
+		}
+
+		if ( 0 >= absint( $feedback_id ) ) {
+			return true;
+		}
+
+		return self::feedback_matches_context( absint( $feedback_id ), $context );
 	}
 
 	/**
-	 * Redirect the public Contact Us form to the success page.
+	 * Redirect a successfully handled target form to the success page.
 	 *
 	 * @param string $redirect Existing redirect URL.
-	 * @param int    $id       Jetpack contact form ID.
+	 * @param int    $id       Jetpack contact form route ID.
 	 * @param int    $post_id  Feedback post ID.
 	 * @return string
 	 */
 	public static function redirect_contact_form( $redirect, $id, $post_id ) {
-		if ( ! Settings::is_contact_form_id( $id ) || ! self::is_target_submission() ) {
+		unset( $id );
+
+		$context = self::get_submitted_context();
+
+		if ( null === $context || ! self::feedback_matches_context( absint( $post_id ), $context ) ) {
 			return $redirect;
 		}
 
@@ -163,7 +236,7 @@ final class JetpackForms {
 			return $redirect;
 		}
 
-		return SubmissionMessages::add_result_to_redirect( $success_url, $post_id );
+		return SubmissionMessages::add_result_to_redirect( $success_url, $post_id, $context['profile_id'] );
 	}
 
 	/**
@@ -181,11 +254,9 @@ final class JetpackForms {
 	public static function subscribe_newsletter_opt_in( $post_id, $to, $subject, $message, $headers, $all_values, $extra_values ) {
 		unset( $to, $subject, $message, $headers, $extra_values );
 
-		if ( ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) ) {
-			return;
-		}
+		$context = self::get_submitted_context();
 
-		if ( ! self::is_target_submission() ) {
+		if ( null === $context || ! self::feedback_matches_context( absint( $post_id ), $context ) ) {
 			return;
 		}
 
@@ -204,7 +275,7 @@ final class JetpackForms {
 			return;
 		}
 
-		$result = ( new EmailOctopusSubscriber() )->subscribe( $email_address, $all_values );
+		$result = ( new EmailOctopusSubscriber( $context['profile_id'] ) )->subscribe( $email_address, $all_values );
 
 		if ( is_wp_error( $result ) ) {
 			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'failed' );
@@ -223,7 +294,171 @@ final class JetpackForms {
 	}
 
 	/**
-	 * Whether the submitted Jetpack fields include a newsletter opt-in.
+	 * Parse and verify the submitted integration context.
+	 *
+	 * @return array{profile_id:string,form_ref:int,mode:string}|null
+	 */
+	private static function get_submitted_context() {
+		if ( ! isset( $_POST[ self::TARGET_FIELD ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verification occurs below.
+			return null;
+		}
+
+		$has_profile  = isset( $_POST[ self::PROFILE_FIELD ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+		$has_form_ref = isset( $_POST[ self::FORM_REF_FIELD ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+		$nonce        = sanitize_text_field( wp_unslash( $_POST[ self::TARGET_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- this is the nonce being verified.
+
+		if ( $has_profile || $has_form_ref ) {
+			if ( ! $has_profile || ! $has_form_ref || ! IntegrationResolver::is_portable_available() ) {
+				return null;
+			}
+
+			$profile_id = sanitize_key( wp_unslash( $_POST[ self::PROFILE_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+			$form_ref   = absint( wp_unslash( $_POST[ self::FORM_REF_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+			$profile    = IntegrationResolver::get_profile( $profile_id );
+
+			if ( null === $profile || ! in_array( $form_ref, $profile->get_target_form_ids(), true ) || ! IntegrationResolver::is_target_form_id( $form_ref ) ) {
+				return null;
+			}
+
+			if ( ! wp_verify_nonce( $nonce, self::get_portable_nonce_action( $profile_id, $form_ref ) ) ) {
+				return null;
+			}
+
+			return array(
+				'profile_id' => $profile_id,
+				'form_ref'   => $form_ref,
+				'mode'       => 'portable',
+			);
+		}
+
+		if ( ! self::accepts_legacy_submission_context() || ! Settings::has_single_contact_form() || ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) || ! wp_verify_nonce( $nonce, self::get_legacy_nonce_action() ) ) {
+			return null;
+		}
+
+		return array(
+			'profile_id' => IntegrationResolver::get_default_profile()->get_id(),
+			'form_ref'   => IntegrationResolver::get_target_form_id(),
+			'mode'       => 'legacy',
+		);
+	}
+
+	/**
+	 * Verify Jetpack's authoritative saved-form identity against signed context.
+	 *
+	 * @param int                                         $feedback_id Feedback post ID.
+	 * @param array{profile_id:string,form_ref:int,mode:string} $context Signed context.
+	 * @return bool
+	 */
+	private static function feedback_matches_context( $feedback_id, $context ) {
+		if ( 0 >= $feedback_id ) {
+			return false;
+		}
+
+		if ( ! IntegrationResolver::supports_portable_forms() ) {
+			return 'portable' !== $context['mode'];
+		}
+
+		$feedback_form_id = self::get_feedback_form_id( $feedback_id );
+
+		if ( null === $feedback_form_id ) {
+			return false;
+		}
+
+		if ( 0 < $context['form_ref'] ) {
+			return $context['form_ref'] === $feedback_form_id;
+		}
+
+		return 'legacy' === $context['mode'] && 0 === $feedback_form_id;
+	}
+
+	/**
+	 * Read the saved-form ID recorded by Jetpack for a feedback post.
+	 *
+	 * @param int $feedback_id Feedback post ID.
+	 * @return int|null
+	 */
+	private static function get_feedback_form_id( $feedback_id ) {
+		$class_name = '\\Automattic\\Jetpack\\Forms\\ContactForm\\Feedback';
+
+		if ( ! class_exists( $class_name ) || ! method_exists( $class_name, 'get' ) ) {
+			return null;
+		}
+
+		try {
+			$feedback = $class_name::get( $feedback_id );
+
+			if ( ! is_object( $feedback ) || ! method_exists( $feedback, 'get_form_id' ) ) {
+				return null;
+			}
+
+			return absint( $feedback->get_form_id() );
+		} catch ( \Throwable $exception ) {
+			unset( $exception );
+			return null;
+		}
+	}
+
+	/**
+	 * Resolve a saved-form reference from parsed block attributes.
+	 *
+	 * @param array<string,mixed> $parsed_block Parsed block data.
+	 * @return int
+	 */
+	private static function get_block_form_ref( $parsed_block ) {
+		if ( 'jetpack/contact-form' !== ( $parsed_block['blockName'] ?? '' ) ) {
+			return 0;
+		}
+
+		return absint( $parsed_block['attrs']['ref'] ?? 0 );
+	}
+
+	/**
+	 * Whether page-scoped compatibility routing should remain active.
+	 *
+	 * A non-zero invalid saved-form target is an explicit broken configuration,
+	 * so it must fail closed instead of silently reviving page-scoped side effects.
+	 *
+	 * @return bool
+	 */
+	private static function uses_legacy_mode() {
+		return ! IntegrationResolver::supports_portable_forms() || 0 === IntegrationResolver::get_target_form_id();
+	}
+
+	/**
+	 * Whether a cached page-scoped marker may still reach identity verification.
+	 *
+	 * Portable configurations accept the old signed page marker during cache
+	 * rollover, then require the feedback's saved-form ID to match. Explicitly
+	 * invalid non-zero targets remain fail-closed.
+	 *
+	 * @return bool
+	 */
+	private static function accepts_legacy_submission_context() {
+		return IntegrationResolver::is_portable_available() || self::uses_legacy_mode();
+	}
+
+	/**
+	 * Get the nonce action binding a portable profile and saved form.
+	 *
+	 * @param string $profile_id Integration profile ID.
+	 * @param int    $form_ref   Saved Jetpack form ID.
+	 * @return string
+	 */
+	private static function get_portable_nonce_action( $profile_id, $form_ref ) {
+		return 'ran_octopus_forms_target_' . sanitize_key( $profile_id ) . '_' . absint( $form_ref );
+	}
+
+	/**
+	 * Get the legacy page-scoped nonce action.
+	 *
+	 * @return string
+	 */
+	private static function get_legacy_nonce_action() {
+		return 'ran_octopus_forms_target_' . Settings::get_contact_page_id();
+	}
+
+	/**
+	 * Whether submitted fields include the configured newsletter opt-in.
 	 *
 	 * @param array $all_values Contact form fields.
 	 * @return bool

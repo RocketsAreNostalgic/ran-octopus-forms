@@ -16,6 +16,24 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class EmailOctopusSubscriber {
 	/**
+	 * Integration profile used for this request.
+	 *
+	 * @var string
+	 */
+	private $profile_id;
+
+	/**
+	 * Create a subscriber for one integration profile.
+	 *
+	 * The optional argument preserves the existing public construction pattern.
+	 *
+	 * @param string $profile_id Integration profile ID.
+	 */
+	public function __construct( $profile_id = 'default' ) {
+		$this->profile_id = sanitize_key( (string) $profile_id );
+	}
+
+	/**
 	 * Subscribe an email address to the newsletter list.
 	 *
 	 * @param string $email_address Email address.
@@ -109,13 +127,14 @@ final class EmailOctopusSubscriber {
 	 * @return string
 	 */
 	private function get_list_id() {
-		$list_id = Settings::get_emailoctopus_list_id();
+		$configuration = $this->get_profile_configuration();
+		$list_id       = isset( $configuration['emailoctopus_list_id'] ) ? (string) $configuration['emailoctopus_list_id'] : Settings::get_emailoctopus_list_id();
 
 		if ( '' !== $list_id ) {
 			return $list_id;
 		}
 
-		$form_id = Settings::get_emailoctopus_form_id();
+		$form_id = isset( $configuration['emailoctopus_form_id'] ) ? (string) $configuration['emailoctopus_form_id'] : Settings::get_emailoctopus_form_id();
 
 		if ( '' === $form_id ) {
 			return '';
@@ -128,5 +147,20 @@ final class EmailOctopusSubscriber {
 		}
 
 		return sanitize_text_field( (string) ( $form['list_id'] ?? '' ) );
+	}
+
+	/**
+	 * Get the resolved profile configuration without changing legacy filters.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function get_profile_configuration() {
+		$profile = IntegrationResolver::get_profile( $this->profile_id );
+
+		if ( null === $profile ) {
+			return array();
+		}
+
+		return $profile->get_configuration();
 	}
 }

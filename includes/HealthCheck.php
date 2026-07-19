@@ -23,6 +23,7 @@ final class HealthCheck {
 	public static function run() {
 		$checks = array_merge(
 			self::check_plugins(),
+			self::check_integration_target(),
 			self::check_pages(),
 			self::check_pattern(),
 			self::check_contact_form(),
@@ -72,8 +73,53 @@ final class HealthCheck {
 		$success_id = absint( Settings::get( 'success_page_id' ) );
 
 		return array(
-			self::post_status_check( __( 'Contact page', 'ran-emailoctopus-jetpack-forms' ), $contact_id ),
+			self::contact_page_status_check( $contact_id ),
 			self::post_status_check( __( 'Success page', 'ran-emailoctopus-jetpack-forms' ), $success_id ),
+		);
+	}
+
+	/**
+	 * Check the capability and selected saved-form target behind the active mode.
+	 *
+	 * @return array<int,array<string,string>>
+	 */
+	private static function check_integration_target() {
+		$reason  = IntegrationResolver::get_portability_reason();
+		$form_id = IntegrationResolver::get_target_form_id();
+
+		if ( IntegrationResolver::is_portable_available() ) {
+			$form  = get_post( $form_id );
+			$title = $form instanceof \WP_Post && '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
+
+			return array(
+				self::row( 'pass', __( 'Integration mode', 'ran-emailoctopus-jetpack-forms' ), __( 'Portable saved-form mode is active. One integration profile follows the selected form across routes.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::row(
+					'pass',
+					__( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ),
+					sprintf(
+						/* translators: 1: saved Jetpack form title, 2: post ID. */
+						__( 'Published saved form "%1$s" (#%2$d) is the portable integration target.', 'ran-emailoctopus-jetpack-forms' ),
+						$title,
+						$form_id
+					)
+				),
+			);
+		}
+
+		if ( 'feedback_identity_unavailable' === $reason ) {
+			return array(
+				self::row( 'warning', __( 'Integration mode', 'ran-emailoctopus-jetpack-forms' ), __( 'Legacy compatibility mode is active because this Jetpack version cannot authoritatively identify a saved form after submission. The single marked form on the configured contact page remains the safe integration boundary.', 'ran-emailoctopus-jetpack-forms' ) ),
+			);
+		}
+
+		if ( 'target_not_selected' === $reason ) {
+			return array(
+				self::row( 'warning', __( 'Integration mode', 'ran-emailoctopus-jetpack-forms' ), __( 'Legacy compatibility mode is active. Select a published saved Jetpack form to enable route-independent targeting; until then the configured contact page remains the integration boundary.', 'ran-emailoctopus-jetpack-forms' ) ),
+			);
+		}
+
+		return array(
+			self::row( 'error', __( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ), self::get_invalid_target_message( $reason, $form_id ) ),
 		);
 	}
 
@@ -102,6 +148,25 @@ final class HealthCheck {
 	 * @return array<int,array<string,string>>
 	 */
 	private static function check_contact_form() {
+		if ( IntegrationResolver::is_portable_available() ) {
+			$source_fields = EmailOctopusFieldMapper::get_source_fields();
+
+			return array(
+				self::status( ! empty( $source_fields ) ? 'pass' : 'error', __( 'Saved form fields', 'ran-emailoctopus-jetpack-forms' ), __( 'Field discovery is reading the selected saved Jetpack form.', 'ran-emailoctopus-jetpack-forms' ), __( 'No Jetpack fields were detected in the selected saved form. Edit the saved form and confirm its field blocks are inside the single contact form.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::status( ! empty( EmailOctopusFieldMapper::get_email_source_fields() ) ? 'pass' : 'error', __( 'Email field', 'ran-emailoctopus-jetpack-forms' ), __( 'Selected saved form includes a usable email field.', 'ran-emailoctopus-jetpack-forms' ), __( 'Selected saved form is missing an unambiguous email field.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::check_email_source_mapping(),
+				self::check_newsletter_source_mapping(),
+				self::status( has_filter( 'grunion_contact_form_redirect_url', array( JetpackForms::class, 'redirect_contact_form' ) ) ? 'pass' : 'error', __( 'Redirect hook', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is registered.', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is missing.', 'ran-emailoctopus-jetpack-forms' ) ),
+			);
+		}
+
+		if ( IntegrationResolver::supports_portable_forms() && 0 < IntegrationResolver::get_target_form_id() ) {
+			return array(
+				self::row( 'skipped', __( 'Saved form field mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Field mapping cannot be checked until the unavailable saved-form target is repaired or replaced. Jetpack notifications remain independent; EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::status( has_filter( 'grunion_contact_form_redirect_url', array( JetpackForms::class, 'redirect_contact_form' ) ) ? 'pass' : 'error', __( 'Redirect hook', 'ran-emailoctopus-jetpack-forms' ), __( 'Contact form redirect hook is registered.', 'ran-emailoctopus-jetpack-forms' ), __( 'Contact form redirect hook is missing.', 'ran-emailoctopus-jetpack-forms' ) ),
+			);
+		}
+
 		$content = self::get_contact_form_content();
 		$count   = Settings::get_contact_form_count();
 		/* translators: %d: number of Jetpack contact forms found. */
@@ -179,7 +244,12 @@ final class HealthCheck {
 		$url = get_permalink( Settings::get_contact_page_id() );
 
 		if ( ! $url ) {
-			return array( self::row( 'error', __( 'Frontend render', 'ran-emailoctopus-jetpack-forms' ), __( 'Contact page URL is unavailable.', 'ran-emailoctopus-jetpack-forms' ) ) );
+			$status  = IntegrationResolver::is_portable_available() ? 'skipped' : 'error';
+			$message = IntegrationResolver::is_portable_available()
+				? __( 'No legacy contact-page URL is available for a safe frontend probe. Portable targeting remains route-independent; manually verify each route that embeds the selected saved form.', 'ran-emailoctopus-jetpack-forms' )
+				: __( 'Contact page URL is unavailable.', 'ran-emailoctopus-jetpack-forms' );
+
+			return array( self::row( $status, __( 'Frontend render', 'ran-emailoctopus-jetpack-forms' ), $message ) );
 		}
 
 		$response = wp_remote_get( $url, array( 'timeout' => 10 ) );
@@ -190,9 +260,12 @@ final class HealthCheck {
 
 		$body = wp_remote_retrieve_body( $response );
 
+		$page_label = IntegrationResolver::is_portable_available() ? __( 'Fallback contact page', 'ran-emailoctopus-jetpack-forms' ) : __( 'Contact page', 'ran-emailoctopus-jetpack-forms' );
+
 		return array(
-			self::status( 200 === wp_remote_retrieve_response_code( $response ) ? 'pass' : 'error', __( 'Contact page response', 'ran-emailoctopus-jetpack-forms' ), __( 'Contact page returns HTTP 200.', 'ran-emailoctopus-jetpack-forms' ), __( 'Contact page did not return HTTP 200.', 'ran-emailoctopus-jetpack-forms' ) ),
-			self::status( false !== strpos( $body, 'jetpack-contact-form' ) ? 'pass' : 'error', __( 'Rendered Jetpack form', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered page includes the Jetpack form.', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered page is missing the Jetpack form.', 'ran-emailoctopus-jetpack-forms' ) ),
+			/* translators: %s: contact-page role in the active integration mode. */
+			self::status( 200 === wp_remote_retrieve_response_code( $response ) ? 'pass' : 'error', sprintf( __( '%s response', 'ran-emailoctopus-jetpack-forms' ), $page_label ), __( 'Configured page returns HTTP 200.', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured page did not return HTTP 200.', 'ran-emailoctopus-jetpack-forms' ) ),
+			self::status( false !== strpos( $body, 'jetpack-contact-form' ) ? 'pass' : 'error', __( 'Rendered Jetpack form', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered page includes a Jetpack form.', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered page is missing a Jetpack form.', 'ran-emailoctopus-jetpack-forms' ) ),
 			self::status( false === strpos( $body, 'emailoctopus' ) ? 'pass' : 'error', __( 'EmailOctopus embed removed', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered contact page does not include an EmailOctopus embed.', 'ran-emailoctopus-jetpack-forms' ), __( 'Rendered contact page still includes an EmailOctopus embed.', 'ran-emailoctopus-jetpack-forms' ) ),
 		);
 	}
@@ -240,8 +313,64 @@ final class HealthCheck {
 			return self::row( 'error', $label, __( 'Page does not exist.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
-		/* translators: %s: WordPress post status. */
+		/* translators: %s: WordPress page status. */
 		return self::row( 'publish' === $post->post_status ? 'pass' : 'error', $label, sprintf( __( 'Page status: %s.', 'ran-emailoctopus-jetpack-forms' ), $post->post_status ) );
+	}
+
+	/**
+	 * Check the page-scoped fallback according to the active integration mode.
+	 *
+	 * @param int $post_id Contact page ID.
+	 * @return array<string,string>
+	 */
+	private static function contact_page_status_check( $post_id ) {
+		$post     = 0 < $post_id ? get_post( $post_id ) : null;
+		$portable = IntegrationResolver::is_portable_available();
+
+		if ( ! $post instanceof \WP_Post || 'page' !== $post->post_type ) {
+			return self::row(
+				$portable ? 'warning' : 'error',
+				$portable ? __( 'Legacy contact page fallback', 'ran-emailoctopus-jetpack-forms' ) : __( 'Contact page', 'ran-emailoctopus-jetpack-forms' ),
+				$portable
+					? __( 'No valid contact-page fallback is configured. Portable mode can run now, but a downgrade to legacy Jetpack behaviour would need a published page containing the one marked form.', 'ran-emailoctopus-jetpack-forms' )
+					: __( 'Contact page does not exist.', 'ran-emailoctopus-jetpack-forms' )
+			);
+		}
+
+		$status = 'publish' === $post->post_status ? 'pass' : ( $portable ? 'warning' : 'error' );
+		$label  = $portable ? __( 'Legacy contact page fallback', 'ran-emailoctopus-jetpack-forms' ) : __( 'Contact page', 'ran-emailoctopus-jetpack-forms' );
+
+		/* translators: %s: WordPress page status. */
+		return self::row( $status, $label, sprintf( __( 'Page status: %s.', 'ran-emailoctopus-jetpack-forms' ), $post->post_status ) );
+	}
+
+	/**
+	 * Explain how to repair an invalid selected saved-form target.
+	 *
+	 * @param string $reason  Resolver reason code.
+	 * @param int    $form_id Selected form ID.
+	 * @return string
+	 */
+	private static function get_invalid_target_message( $reason, $form_id ) {
+		switch ( $reason ) {
+			case 'target_missing':
+				/* translators: %d: missing saved Jetpack form ID. */
+				return sprintf( __( 'Saved form #%d was deleted or is unavailable. Select a replacement published Jetpack form. EmailOctopus side effects are paused; Jetpack notifications remain independent.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+			case 'target_wrong_type':
+				/* translators: %d: selected WordPress post ID. */
+				return sprintf( __( 'Target #%d is not a jetpack_form post. Select a published saved Jetpack form. EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+			case 'target_not_published':
+				$post   = get_post( $form_id );
+				$status = $post instanceof \WP_Post ? $post->post_status : __( 'unknown', 'ran-emailoctopus-jetpack-forms' );
+
+				/* translators: 1: selected saved Jetpack form ID, 2: WordPress post status. */
+				return sprintf( __( 'Saved form #%1$d has status "%2$s". Publish it or select another published form. EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' ), $form_id, $status );
+			case 'target_invalid_structure':
+				/* translators: %d: selected saved Jetpack form ID. */
+				return sprintf( __( 'Saved form #%d does not contain exactly one Jetpack contact form. Repair its structure or select another saved form. EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+			default:
+				return __( 'The selected saved Jetpack form is unavailable for portable targeting. Select a published saved form and rerun the health check.', 'ran-emailoctopus-jetpack-forms' );
+		}
 	}
 
 	/**
@@ -318,7 +447,7 @@ final class HealthCheck {
 			return self::row( 'pass', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Email source maps to "%s".', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $email_source ) );
 		}
 
-		return self::row( 'error', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured email source was not detected on the contact form.', 'ran-emailoctopus-jetpack-forms' ) );
+		return self::row( 'error', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured email source was not detected on the active integration form.', 'ran-emailoctopus-jetpack-forms' ) );
 	}
 
 	/**
@@ -347,7 +476,7 @@ final class HealthCheck {
 			return self::row( 'pass', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Newsletter opt-in maps to "%s".', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $newsletter_source ) );
 		}
 
-		return self::row( 'error', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured newsletter source was not detected on the contact form.', 'ran-emailoctopus-jetpack-forms' ) );
+		return self::row( 'error', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured newsletter source was not detected on the active integration form.', 'ran-emailoctopus-jetpack-forms' ) );
 	}
 
 	/**
@@ -397,7 +526,7 @@ final class HealthCheck {
 				__( 'EmailOctopus field mapping', 'ran-emailoctopus-jetpack-forms' ),
 				sprintf(
 					/* translators: 1: number of mapped fields, 2: number of invalid fields, 3: comma-separated example field names. */
-					__( '%1$d custom field(s) are mapped, but %2$d mapping(s) point to Jetpack fields that were not detected on the configured contact form: %3$s.', 'ran-emailoctopus-jetpack-forms' ),
+					__( '%1$d custom field(s) are mapped, but %2$d mapping(s) point to Jetpack fields that were not detected on the active integration form: %3$s.', 'ran-emailoctopus-jetpack-forms' ),
 					$mapped_count,
 					count( $invalid ),
 					implode( ', ', array_slice( $invalid, 0, 5 ) )

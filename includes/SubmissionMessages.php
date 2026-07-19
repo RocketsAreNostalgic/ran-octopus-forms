@@ -50,20 +50,29 @@ final class SubmissionMessages {
 	/**
 	 * Add a one-time subscription result token to the success redirect.
 	 *
-	 * @param string $redirect Redirect URL.
-	 * @param int    $post_id  Jetpack feedback post ID.
+	 * @param string $redirect   Redirect URL.
+	 * @param int    $post_id    Jetpack feedback post ID.
+	 * @param string $profile_id Integration profile ID.
 	 * @return string
 	 */
-	public static function add_result_to_redirect( $redirect, $post_id ) {
+	public static function add_result_to_redirect( $redirect, $post_id, $profile_id = 'default' ) {
 		$outcome = sanitize_key( (string) get_post_meta( $post_id, '_ran_emailoctopus_subscription_status', true ) );
+		$profile = IntegrationResolver::get_profile( sanitize_key( (string) $profile_id ) );
 
-		if ( ! self::is_supported_outcome( $outcome ) ) {
+		if ( ! self::is_supported_outcome( $outcome ) || null === $profile ) {
 			return $redirect;
 		}
 
 		$token = wp_generate_password( 32, false, false );
 
-		set_transient( self::RESULT_TRANSIENT_PREFIX . $token, $outcome, 10 * MINUTE_IN_SECONDS );
+		set_transient(
+			self::RESULT_TRANSIENT_PREFIX . $token,
+			array(
+				'profile_id' => $profile->get_id(),
+				'outcome'    => $outcome,
+			),
+			10 * MINUTE_IN_SECONDS
+		);
 
 		return add_query_arg( self::RESULT_QUERY_ARG, $token, $redirect );
 	}
@@ -84,14 +93,27 @@ final class SubmissionMessages {
 			return '';
 		}
 
-		$outcome = get_transient( self::RESULT_TRANSIENT_PREFIX . $token );
+		$result = get_transient( self::RESULT_TRANSIENT_PREFIX . $token );
 		delete_transient( self::RESULT_TRANSIENT_PREFIX . $token );
 
-		if ( ! is_string( $outcome ) || ! self::is_supported_outcome( $outcome ) ) {
+		if ( is_string( $result ) ) {
+			// Existing one-time tokens stored only the outcome.
+			$profile_id = 'default';
+			$outcome    = $result;
+		} elseif ( is_array( $result ) ) {
+			$profile_id = sanitize_key( (string) ( $result['profile_id'] ?? '' ) );
+			$outcome    = sanitize_key( (string) ( $result['outcome'] ?? '' ) );
+		} else {
 			return '';
 		}
 
-		$message = Settings::get_emailoctopus_outcome_message( $outcome );
+		$profile = IntegrationResolver::get_profile( $profile_id );
+
+		if ( ! self::is_supported_outcome( $outcome ) || null === $profile ) {
+			return '';
+		}
+
+		$message = self::get_profile_outcome_message( $profile, $outcome );
 
 		if ( '' === $message ) {
 			return '';
@@ -149,5 +171,29 @@ final class SubmissionMessages {
 	 */
 	private static function is_supported_outcome( $outcome ) {
 		return in_array( $outcome, array( 'pending', 'subscribed', 'existing', 'failed' ), true );
+	}
+
+	/**
+	 * Resolve an outcome message through the carried integration profile.
+	 *
+	 * @param IntegrationProfile $profile Integration profile.
+	 * @param string             $outcome EmailOctopus outcome.
+	 * @return string
+	 */
+	private static function get_profile_outcome_message( $profile, $outcome ) {
+		$message_keys = array(
+			'pending'    => 'emailoctopus_pending_message',
+			'subscribed' => 'emailoctopus_subscribed_message',
+			'existing'   => 'emailoctopus_existing_message',
+			'failed'     => 'emailoctopus_failure_message',
+		);
+		$key          = $message_keys[ sanitize_key( $outcome ) ] ?? '';
+		$config       = $profile->get_configuration();
+
+		if ( '' !== $key && array_key_exists( $key, $config ) ) {
+			return sanitize_textarea_field( (string) $config[ $key ] );
+		}
+
+		return Settings::get_emailoctopus_outcome_message( $outcome );
 	}
 }

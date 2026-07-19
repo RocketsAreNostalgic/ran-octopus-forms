@@ -145,11 +145,11 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A legacy page with exactly one form is upgraded to explicit ownership.
+	 * An inline legacy form is never rewritten during the saved-form migration.
 	 *
 	 * @return void
 	 */
-	public function test_upgrade_marks_a_single_existing_contact_form() {
+	public function test_upgrade_leaves_a_single_inline_contact_form_unchanged() {
 		$page_id = self::factory()->post->create(
 			array(
 				'post_type'    => 'page',
@@ -166,10 +166,12 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 			)
 		);
 
+		$original_content = (string) get_post_field( 'post_content', $page_id );
 		Settings::upgrade();
 
-		$this->assertTrue( Settings::has_single_contact_form() );
-		$this->assertStringContainsString( Settings::TARGET_FORM_CLASS, (string) get_post_field( 'post_content', $page_id ) );
+		$this->assertSame( 0, Settings::get_target_form_id() );
+		$this->assertFalse( Settings::has_target_contact_form() );
+		$this->assertSame( $original_content, (string) get_post_field( 'post_content', $page_id ) );
 	}
 
 	/**

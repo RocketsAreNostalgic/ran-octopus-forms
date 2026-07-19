@@ -119,9 +119,11 @@ final class Admin {
 			return;
 		}
 
-		$settings = Settings::get_all();
-		$health   = self::get_health_result();
-		$forms    = EmailOctopusApi::get_forms();
+		$settings    = Settings::get_all();
+		$health      = self::get_health_result();
+		$forms       = EmailOctopusApi::get_forms();
+		$portable    = IntegrationResolver::supports_portable_forms();
+		$saved_forms = $portable ? self::get_saved_jetpack_forms() : array();
 		?>
 		<div class="wrap">
 			<style>
@@ -209,13 +211,27 @@ final class Admin {
 				<fieldset class="postbox ran-emailoctopus-jetpack-forms-fieldset">
 					<legend class="hndle"><span><?php esc_html_e( 'Contact flow', 'ran-emailoctopus-jetpack-forms' ); ?></span></legend>
 					<div class="inside">
+						<?php self::render_integration_mode_notice(); ?>
+						<?php if ( $portable ) : ?>
+							<div class="ran-emailoctopus-jetpack-forms-field">
+								<label for="ran-emailoctopus-jetpack-forms-target-form"><?php esc_html_e( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ); ?></label>
+								<?php self::saved_form_dropdown( $saved_forms, absint( $settings['target_form_id'] ?? 0 ) ); ?>
+								<p class="description"><?php esc_html_e( 'This saved form carries the EmailOctopus mapping and success flow wherever Jetpack reuses it. Select one published form definition, not an individual page where it appears.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+							</div>
+						<?php endif; ?>
 						<div class="ran-emailoctopus-jetpack-forms-field">
-							<label for="ran-emailoctopus-jetpack-forms-contact-page"><?php esc_html_e( 'Contact page', 'ran-emailoctopus-jetpack-forms' ); ?></label>
+							<label for="ran-emailoctopus-jetpack-forms-contact-page"><?php echo esc_html( $portable ? __( 'Legacy contact page fallback', 'ran-emailoctopus-jetpack-forms' ) : __( 'Contact page', 'ran-emailoctopus-jetpack-forms' ) ); ?></label>
 							<?php self::page_dropdown( 'contact_page_id', 'ran-emailoctopus-jetpack-forms-contact-page', absint( $settings['contact_page_id'] ) ); ?>
+							<?php if ( $portable ) : ?>
+								<p class="description"><?php esc_html_e( 'Retained for compatibility with older Jetpack versions that cannot identify saved forms during submission. Portable mode does not limit the selected saved form to this page.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+							<?php else : ?>
+								<p class="description"><?php esc_html_e( 'Legacy compatibility mode applies the integration only to the single marked Jetpack form on this page.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+							<?php endif; ?>
 						</div>
 						<div class="ran-emailoctopus-jetpack-forms-field">
 							<label for="ran-emailoctopus-jetpack-forms-success-page"><?php esc_html_e( 'Success page', 'ran-emailoctopus-jetpack-forms' ); ?></label>
 							<?php self::page_dropdown( 'success_page_id', 'ran-emailoctopus-jetpack-forms-success-page', absint( $settings['success_page_id'] ) ); ?>
+							<p class="description"><?php esc_html_e( 'The success destination remains one page for every route that embeds the selected saved form.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 						</div>
 					</div>
 				</fieldset>
@@ -325,6 +341,130 @@ final class Admin {
 				'option_none_value' => 0,
 			)
 		);
+	}
+
+	/**
+	 * Render the current portable or legacy integration mode.
+	 *
+	 * @return void
+	 */
+	private static function render_integration_mode_notice() {
+		$reason = IntegrationResolver::get_portability_reason();
+
+		if ( IntegrationResolver::is_portable_available() ) {
+			$form_id = IntegrationResolver::get_target_form_id();
+			?>
+			<div class="notice notice-success inline"><p>
+				<?php
+				/* translators: %d: selected saved Jetpack form ID. */
+				echo esc_html( sprintf( __( 'Portable saved-form mode is active for form #%d. The same integration follows this form across routes.', 'ran-emailoctopus-jetpack-forms' ), $form_id ) );
+				?>
+			</p></div>
+			<?php
+			return;
+		}
+
+		$target_is_invalid = IntegrationResolver::supports_portable_forms() && 0 < IntegrationResolver::get_target_form_id();
+		$reason_message    = self::get_portability_reason_message( $reason );
+		$notice_class      = $target_is_invalid ? 'notice-error' : 'notice-warning';
+		?>
+		<div class="notice <?php echo esc_attr( $notice_class ); ?> inline"><p>
+			<strong>
+				<?php
+				echo esc_html(
+					$target_is_invalid
+						? __( 'EmailOctopus routing is paused.', 'ran-emailoctopus-jetpack-forms' )
+						: __( 'Legacy compatibility mode is active.', 'ran-emailoctopus-jetpack-forms' )
+				);
+				?>
+			</strong>
+			<?php echo esc_html( ' ' . $reason_message ); ?>
+		</p></div>
+		<?php
+	}
+
+	/**
+	 * Get published saved Jetpack forms for the primary integration selector.
+	 *
+	 * @return array<int,\WP_Post>
+	 */
+	private static function get_saved_jetpack_forms() {
+		$forms = get_posts(
+			array(
+				'post_type'              => 'jetpack_form',
+				'post_status'            => 'publish',
+				'posts_per_page'         => -1,
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		return is_array( $forms ) ? $forms : array();
+	}
+
+	/**
+	 * Render the published saved-form selector while preserving stale targets.
+	 *
+	 * @param array<int,\WP_Post> $forms    Published saved forms.
+	 * @param int                 $selected Selected or stale form ID.
+	 * @return void
+	 */
+	private static function saved_form_dropdown( $forms, $selected ) {
+		$selected_found = false;
+		?>
+		<select class="regular-text" id="ran-emailoctopus-jetpack-forms-target-form" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[target_form_id]">
+			<option value="0"><?php esc_html_e( 'Select a saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ); ?></option>
+			<?php foreach ( $forms as $form ) : ?>
+				<?php
+				if ( ! $form instanceof \WP_Post ) {
+					continue;
+				}
+
+				$form_id        = absint( $form->ID );
+				$selected_found = $selected_found || $form_id === $selected;
+				$title          = '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
+				/* translators: 1: saved Jetpack form title, 2: post ID. */
+				$label = sprintf( __( '%1$s (#%2$d)', 'ran-emailoctopus-jetpack-forms' ), $title, $form_id );
+				?>
+				<option value="<?php echo esc_attr( $form_id ); ?>" <?php selected( $selected, $form_id ); ?>><?php echo esc_html( $label ); ?></option>
+			<?php endforeach; ?>
+			<?php if ( 0 < $selected && ! $selected_found ) : ?>
+				<?php /* translators: %d: unavailable saved Jetpack form ID. */ ?>
+				<option value="<?php echo esc_attr( $selected ); ?>" selected><?php echo esc_html( sprintf( __( 'Unavailable saved form (#%d)', 'ran-emailoctopus-jetpack-forms' ), $selected ) ); ?></option>
+			<?php endif; ?>
+		</select>
+		<?php if ( empty( $forms ) ) : ?>
+			<p class="description"><?php esc_html_e( 'No published saved Jetpack forms were found. Create and publish a saved form in Jetpack, then return here.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+		<?php endif; ?>
+		<?php
+	}
+
+	/**
+	 * Translate a resolver reason into actionable administrator guidance.
+	 *
+	 * @param string $reason Resolver reason code.
+	 * @return string
+	 */
+	private static function get_portability_reason_message( $reason ) {
+		switch ( $reason ) {
+			case 'feedback_identity_unavailable':
+				return __( 'This Jetpack version cannot authoritatively identify a saved form after submission, so the single marked form on the contact page remains the safe integration boundary.', 'ran-emailoctopus-jetpack-forms' );
+			case 'target_not_selected':
+				return __( 'Select a published saved Jetpack form to enable route-independent targeting. Until then, the configured contact page remains the integration boundary.', 'ran-emailoctopus-jetpack-forms' );
+			case 'target_missing':
+				return __( 'The selected saved form was deleted or is unavailable. Select a replacement published saved Jetpack form; EmailOctopus side effects are paused for the unavailable target.', 'ran-emailoctopus-jetpack-forms' );
+			case 'target_wrong_type':
+				return __( 'The selected target is not a Jetpack saved form. Select a published Jetpack form; EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' );
+			case 'target_not_published':
+				return __( 'The selected saved Jetpack form is not published. Publish it or select another published form; EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' );
+			case 'target_invalid_structure':
+				return __( 'The selected saved form does not contain exactly one Jetpack contact form. Repair the saved form or select another one; EmailOctopus side effects are paused for this target.', 'ran-emailoctopus-jetpack-forms' );
+			default:
+				return __( 'Portable saved-form targeting is unavailable. Review the health check and retain a valid legacy contact page.', 'ran-emailoctopus-jetpack-forms' );
+		}
 	}
 
 	/**

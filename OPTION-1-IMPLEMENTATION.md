@@ -14,14 +14,14 @@ page-scoped behaviour.
 
 ## Dex tree
 
-| ID | Task | Dependencies |
-| --- | --- | --- |
-| `ko985jiz` | Portable saved Jetpack form integration | Parent |
-| `gf2pz4cf` | Lock Option 1 plan and saved-form contract | None |
-| `jpz784hs` | Add saved-form migration and default resolver | `gf2pz4cf` |
-| `iryaqzx3` | Route and verify portable submissions | `jpz784hs` |
-| `u001uzwz` | Update admin discovery, diagnostics, and guidance | `jpz784hs` |
-| `bv5n4uzd` | Prove compatibility and release readiness | `iryaqzx3`, `u001uzwz` |
+| ID         | Task                                              | Dependencies           |
+| ---------- | ------------------------------------------------- | ---------------------- |
+| `ko985jiz` | Portable saved Jetpack form integration           | Parent                 |
+| `gf2pz4cf` | Lock Option 1 plan and saved-form contract        | None                   |
+| `jpz784hs` | Add saved-form migration and default resolver     | `gf2pz4cf`             |
+| `iryaqzx3` | Route and verify portable submissions             | `jpz784hs`             |
+| `u001uzwz` | Update admin discovery, diagnostics, and guidance | `jpz784hs`             |
+| `bv5n4uzd` | Prove compatibility and release readiness         | `iryaqzx3`, `u001uzwz` |
 
 Every child must be completed with its validation result and implementing commit
 SHA before the parent is completed.

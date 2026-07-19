@@ -10,14 +10,22 @@ X-Release-Please-End: x-release-please-end
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-Adds an opt-in EmailOctopus integration to one explicitly marked Jetpack contact form.
+Adds an opt-in EmailOctopus integration to one saved Jetpack form across routes.
 
 == Description ==
 
-RAN EmailOctopus for Jetpack Forms lets an administrator choose one contact page and one marked
-Jetpack form. Only that form can receive the configured success redirect,
-opt-in EmailOctopus subscription, and normal-post behaviour. Other Jetpack forms on the same page or in a
-template remain unchanged.
+RAN EmailOctopus for Jetpack Forms lets an administrator choose one published
+saved Jetpack form. On supported Jetpack versions, the same form can be reused
+on pages, posts, patterns, and other singular routes while retaining one
+success redirect, opt-in EmailOctopus subscription, field mapping, and message
+set. Other saved forms, including adjacent forms on the same route, remain
+unchanged.
+
+Portable targeting requires Jetpack to expose authoritative saved-form identity
+for submitted feedback. Older compatible Jetpack versions retain page-scoped
+legacy behaviour using the configured contact page and marked form. The admin
+screen and health check show which mode is active and why. The contact page is
+kept as a compatibility fallback; the success destination remains page-based.
 
 Jetpack is required. EmailOctopus is optional and remains disabled until the
 administrator configures it.
@@ -26,19 +34,44 @@ administrator configures it.
 
 1. Install and activate Jetpack.
 2. Upload and activate RAN EmailOctopus for Jetpack Forms.
-3. Go to Settings > RAN EmailOctopus and choose contact and success pages.
-4. Insert the Contact Newsletter Form pattern from the RAN Forms category on
-   the contact page.
-5. Optionally add EmailOctopus credentials and a destination.
-6. Add [ran_emailoctopus_jetpack_forms_subscription_message] in a Shortcode block on the
-   configured success page to show the appropriate newsletter outcome message.
+3. Create or choose one published saved Jetpack form. The Contact Newsletter
+   Form pattern in the RAN Forms category is a suitable starting point.
+4. Go to Settings > RAN EmailOctopus, select that saved form, retain a contact
+   page as the compatibility fallback, and choose the success page.
+5. Configure recipients in Jetpack's native Form notifications settings. This
+   plugin does not replace Jetpack's notification email or WordPress mail path.
+6. Optionally add EmailOctopus credentials and a destination.
+7. Add [ran_emailoctopus_jetpack_forms_subscription_message] in a Shortcode
+   block on the configured success page to show the appropriate newsletter
+   outcome message.
 
 == Frequently Asked Questions ==
 
 = Does it change every Jetpack form? =
 
-No. The integration only acts on the form carrying the
-`ran-octopus-forms-contact-form` marker created by the supplied pattern.
+No. In portable mode it acts only on the selected saved form, wherever that
+form is reused. In legacy mode it acts only on the marked form on the configured
+contact page.
+
+= Can one configuration be used on several pages? =
+
+Yes. Reuse the same selected saved Jetpack form on each route. A different
+saved form is a separate definition and is not included automatically.
+
+= Why does the health check report legacy compatibility mode? =
+
+Portable mode needs authoritative saved-form identity from Jetpack and a valid,
+published saved-form target. The health check reports whether the installed
+Jetpack version lacks that capability or the selected form is unavailable,
+draft, the wrong post type, or structurally invalid. Legacy mode keeps the
+configured contact-page integration working where it is safe to do so.
+
+= Does the plugin send contact notification emails? =
+
+No. Jetpack's native Form notifications remain responsible for recipients and
+messages. Those notifications continue through WordPress's normal mail path.
+Avoid enabling another EmailOctopus connector for the same saved form because
+both connectors could process one opt-in.
 
 = What happens when EmailOctopus is not configured? =
 
@@ -73,6 +106,8 @@ First public release for WordPress 6.5+ and PHP 8.0+.
 
 = 1.0.0 =
 
-Existing settings are retained. A legacy contact page with exactly one Jetpack
-form is marked automatically; pages with zero or multiple forms need an
-administrator to insert or mark the intended form.
+Existing settings are retained. When the configured contact page already
+contains one marked, unambiguous saved-form reference, that saved form becomes
+the portable target without rewriting page content. Inline, unmarked, missing,
+or ambiguous forms are not changed automatically; the contact-page fallback
+remains active where safe.
