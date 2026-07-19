@@ -208,7 +208,7 @@ final class HealthCheck {
 			$checks[] = self::row(
 				0 < $eligible_count ? 'warning' : 'error',
 				sprintf( /* translators: %d: saved Jetpack form ID. */ __( 'Subscription mapping for form #%d', 'ran-emailoctopus-jetpack-forms' ), $form_id ),
-				self::get_source_failure_message( $result )
+				self::get_source_failure_message( $result, 0 < $eligible_count )
 			);
 		}
 
@@ -442,10 +442,11 @@ final class HealthCheck {
 	/**
 	 * Explain every configured-source failure for one saved form.
 	 *
-	 * @param array<string,mixed> $result Mapper compatibility result.
+	 * @param array<string,mixed> $result            Mapper compatibility result.
+	 * @param bool                $has_eligible_peer Whether another selected form can subscribe.
 	 * @return string
 	 */
-	private static function get_source_failure_message( $result ) {
+	public static function get_source_failure_message( $result, $has_eligible_peer = false ) {
 		$messages = array();
 
 		foreach ( (array) ( $result['source_failures'] ?? array() ) as $failure ) {
@@ -488,11 +489,15 @@ final class HealthCheck {
 			$messages[] = __( 'the configured subscription mapping is incomplete', 'ran-emailoctopus-jetpack-forms' );
 		}
 
-		return sprintf(
+		$message = sprintf(
 			/* translators: %s: semicolon-separated mapping failure descriptions. */
-			__( 'EmailOctopus is skipped for this form because %s. Other compatible selected forms remain active.', 'ran-emailoctopus-jetpack-forms' ),
+			__( 'EmailOctopus is skipped for this form because %s.', 'ran-emailoctopus-jetpack-forms' ),
 			implode( '; ', $messages )
 		);
+
+		return $message . ' ' . ( $has_eligible_peer
+			? __( 'Other compatible selected forms remain active.', 'ran-emailoctopus-jetpack-forms' )
+			: __( 'No selected form can currently subscribe to EmailOctopus.', 'ran-emailoctopus-jetpack-forms' ) );
 	}
 
 	/**

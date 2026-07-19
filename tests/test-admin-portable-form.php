@@ -58,6 +58,77 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 	}
 
 	/**
+	 * A fully healthy collection does not show failure-oriented guidance.
+	 *
+	 * @return void
+	 */
+	public function test_healthy_integration_notice_does_not_mention_isolation() {
+		$first_form_id  = $this->create_saved_form( 'Portable address', 'Portable opt-in', 'publish', 'Primary signup' );
+		$second_form_id = $this->create_saved_form( 'Portable address', 'Portable opt-in', 'publish', 'Secondary signup' );
+
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge(
+				Settings::get_defaults(),
+				array(
+					'target_form_ids'           => array( $first_form_id, $second_form_id ),
+					'emailoctopus_email_source' => 'portable_address',
+					'newsletter_source'         => 'portable_opt_in',
+				)
+			)
+		);
+
+		$markup = $this->render_integration_notice();
+		$text   = wp_strip_all_tags( $markup );
+
+		$this->assertStringContainsString( 'notice-success', $markup );
+		$this->assertStringContainsString( 'Saved-form routing is active for 2 of 2 selected form(s)', $text );
+		$this->assertDoesNotMatchRegularExpression( '/\b(?:invalid|incompatible|isolation|isolated)\b/i', $text );
+	}
+
+	/**
+	 * A degraded collection identifies every isolated form and its failure.
+	 *
+	 * @return void
+	 */
+	public function test_degraded_integration_notice_lists_each_isolated_form_and_reason() {
+		$valid_form_id   = $this->create_saved_form( 'Portable address', 'Portable opt-in', 'publish', 'Primary signup' );
+		$draft_form_id   = $this->create_saved_form( 'Portable address', 'Portable opt-in', 'draft', 'Paused signup' );
+		$mapping_form_id = $this->create_saved_form(
+			'Other address',
+			'Other opt-in',
+			'publish',
+			'Partner signup'
+		);
+
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge(
+				Settings::get_defaults(),
+				array(
+					'target_form_ids'           => array( $valid_form_id, $draft_form_id, $mapping_form_id ),
+					'emailoctopus_email_source' => 'portable_address',
+					'newsletter_source'         => 'portable_opt_in',
+				)
+			)
+		);
+
+		$markup = $this->render_integration_notice();
+		$text   = preg_replace( '/\s+/', ' ', wp_strip_all_tags( $markup ) );
+
+		$this->assertStringContainsString( 'notice-warning', $markup );
+		$this->assertStringNotContainsString( 'Primary signup (#' . $valid_form_id . ')', $text );
+		$this->assertMatchesRegularExpression(
+			'/Paused signup\s*\(#' . $draft_form_id . '\).*?(?:not published|draft)/i',
+			$text
+		);
+		$this->assertMatchesRegularExpression(
+			'/Partner signup\s*\(#' . $mapping_form_id . '\).*?(?:incompatible|missing).*?(?:email|newsletter|source|mapping)/i',
+			$text
+		);
+	}
+
+	/**
 	 * An unavailable target remains visible so the administrator can repair it.
 	 *
 	 * @return void
@@ -84,6 +155,24 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 	private function render_settings_page() {
 		ob_start();
 		Admin::render_page();
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Render only the integration-state notice.
+	 *
+	 * @return string
+	 */
+	private function render_integration_notice() {
+		$method = new ReflectionMethod( Admin::class, 'render_integration_mode_notice' );
+
+		if ( PHP_VERSION_ID < 80500 ) {
+			$method->setAccessible( true );
+		}
+
+		ob_start();
+		$method->invoke( null );
 
 		return (string) ob_get_clean();
 	}

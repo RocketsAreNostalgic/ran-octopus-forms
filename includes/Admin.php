@@ -369,32 +369,91 @@ final class Admin {
 			return;
 		}
 
-		if ( empty( $routable_ids ) ) {
+		$isolated = array_filter(
+			$compatibility,
+			static function ( $result ) {
+				return empty( $result['eligible'] );
+			}
+		);
+
+		if ( empty( $isolated ) ) {
 			?>
-			<div class="notice notice-error inline"><p>
-				<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
-				<?php esc_html_e( 'None of the selected saved forms is currently routable. Review the unavailable selections and health check.', 'ran-emailoctopus-jetpack-forms' ); ?>
+			<div class="notice notice-success inline"><p>
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: 1: number of routable forms, 2: number of selected forms, 3: number of subscription-compatible forms. */
+						__( 'Saved-form routing is active for %1$d of %2$d selected form(s); EmailOctopus subscriptions are active for %3$d.', 'ran-emailoctopus-jetpack-forms' ),
+						count( $routable_ids ),
+						count( $form_ids ),
+						count( $form_ids )
+					)
+				);
+				?>
 			</p></div>
 			<?php
 			return;
 		}
 
-		$status_class = count( $routable_ids ) === count( $form_ids ) && count( $subscriber_ids ) === count( $form_ids ) ? 'notice-success' : 'notice-warning';
+		$status_class = empty( $routable_ids ) ? 'notice-error' : 'notice-warning';
 		?>
-		<div class="notice <?php echo esc_attr( $status_class ); ?> inline"><p>
-			<?php
-			echo esc_html(
-				sprintf(
-					/* translators: 1: number of routable forms, 2: number of selected forms, 3: number of subscription-compatible forms. */
-					__( 'Saved-form routing is active for %1$d of %2$d selected form(s); EmailOctopus subscriptions are active for %3$d. Invalid or incompatible forms are isolated while valid peers remain active.', 'ran-emailoctopus-jetpack-forms' ),
-					count( $routable_ids ),
-					count( $form_ids ),
-					count( $subscriber_ids )
-				)
-			);
-			?>
-		</p></div>
+		<div class="notice <?php echo esc_attr( $status_class ); ?> inline">
+			<p>
+				<?php if ( empty( $routable_ids ) ) : ?>
+					<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
+					<?php esc_html_e( 'None of the selected saved forms is currently routable.', 'ran-emailoctopus-jetpack-forms' ); ?>
+				<?php else : ?>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: number of routable forms, 2: number of selected forms, 3: number of subscription-compatible forms. */
+							__( 'Saved-form routing is active for %1$d of %2$d selected form(s); EmailOctopus subscriptions are active for %3$d.', 'ran-emailoctopus-jetpack-forms' ),
+							count( $routable_ids ),
+							count( $form_ids ),
+							count( $subscriber_ids )
+						)
+					);
+					?>
+				<?php endif; ?>
+			</p>
+			<p><strong><?php esc_html_e( 'Isolated selected forms:', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
+			<ul>
+				<?php foreach ( $isolated as $form_id => $result ) : ?>
+					<li>
+						<strong><?php echo esc_html( self::get_saved_form_display_label( $form_id ) ); ?>:</strong>
+						<?php
+						$routing_reason = (string) ( $result['routing_reason'] ?? '' );
+						$reason_message = '' !== $routing_reason
+							? self::get_portability_reason_message( $routing_reason )
+							: HealthCheck::get_source_failure_message( $result, ! empty( $subscriber_ids ) );
+
+						echo esc_html( $reason_message );
+						?>
+					</li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
 		<?php
+	}
+
+	/**
+	 * Build an administrator-facing saved-form label.
+	 *
+	 * @param int $form_id Saved Jetpack form ID.
+	 * @return string
+	 */
+	private static function get_saved_form_display_label( $form_id ) {
+		$form  = get_post( $form_id );
+		$title = $form instanceof \WP_Post
+			? ( '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' ) )
+			: __( 'Unavailable saved form', 'ran-emailoctopus-jetpack-forms' );
+
+		return sprintf(
+			/* translators: 1: saved Jetpack form title, 2: post ID. */
+			__( '%1$s (#%2$d)', 'ran-emailoctopus-jetpack-forms' ),
+			$title,
+			absint( $form_id )
+		);
 	}
 
 	/**
@@ -442,9 +501,7 @@ final class Admin {
 
 				$form_id                   = absint( $form->ID );
 				$available_ids[ $form_id ] = true;
-				$title                     = '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
-				/* translators: 1: saved Jetpack form title, 2: post ID. */
-				$label = sprintf( __( '%1$s (#%2$d)', 'ran-emailoctopus-jetpack-forms' ), $title, $form_id );
+				$label                     = self::get_saved_form_display_label( $form_id );
 				?>
 				<p>
 					<label for="ran-emailoctopus-jetpack-forms-target-form-<?php echo esc_attr( $form_id ); ?>">
