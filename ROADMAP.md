@@ -101,6 +101,11 @@ sources. Forms with different fields or destinations need Option 3.
 
 ## Option 3: Independent integration profiles
 
+Implementation is governed by
+[`OPTION-3-IMPLEMENTATION.md`](OPTION-3-IMPLEMENTATION.md), which records the
+clean 2.0.0 schema cutover, conflict-safe write contract, Dex tasks,
+orchestration boundaries, and acceptance gates.
+
 Create a genuine multi-integration model in which each Jetpack form can have
 its own EmailOctopus behaviour.
 
