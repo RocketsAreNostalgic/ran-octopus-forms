@@ -7,20 +7,19 @@ normal release steps.
 
 ## Publish blockers
 
-- [ ] Finish the WordPress.org asset-directory migration currently visible in
-      the worktree: the old `wordpress-org-assets/` files are deleted and the
-      replacement files now live under `wordpress-org/assets/`.
-- [ ] Review and commit the current `RELEASE.md` change so the release handoff
-      matches the new `wordpress-org/assets/` layout.
+- [x] Keep WordPress.org source artwork in `wordpress-org/assets/`, outside the
+      release ZIP. Retain dated concept work under `wordpress-org/assets/drafts/`
+      until final listing artwork is approved.
 - [ ] Confirm the WordPress.org plugin slug
       `ran-emailoctopus-jetpack-forms`, contributor
       account, support ownership, and public repository links are final.
 - [ ] Confirm the banner and icon files in `wordpress-org/assets/` are
       licence-cleared, project-owned, and approved for public directory use.
 - [ ] Create the screenshots referenced by `readme.txt` and place them in
-      `wordpress-org/assets/`:
-      `screenshot-1.png` for settings/integration status and `screenshot-2.png`
-      for the Contact Newsletter Form pattern.
+      `wordpress-org/assets/`: `screenshot-1.png` for the integrations overview
+      and `screenshot-2.png` for the profile editor's saved-form assignment and
+      destination choices. Use a clean configuration with no secrets or visitor
+      data.
 - [ ] Review `readme.txt` against the current WordPress.org readme validator,
       including tags, Jetpack/EmailOctopus external-service
       disclosures, the Release Please-managed stable tag, screenshots, and the declared

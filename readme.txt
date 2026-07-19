@@ -10,16 +10,27 @@ X-Release-Please-End: x-release-please-end
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-Adds independent EmailOctopus integration profiles to saved Jetpack forms.
+Connect selected saved Jetpack forms to EmailOctopus with independent
+integration profiles.
 
 == Description ==
 
-RAN EmailOctopus for Jetpack Forms lets an administrator create independent
-integration profiles. Each profile owns one or more compatible published saved
-Jetpack forms and defines its own EmailOctopus destination, field mappings,
-success page, and outcome messages. An assigned form can be reused on pages,
-posts, patterns, and other singular routes. Unassigned forms, including adjacent
-forms on the same route, remain unchanged.
+Connect the saved Jetpack forms that matter to EmailOctopus without taking over
+every form on a site. RAN EmailOctopus for Jetpack Forms lets an administrator
+create independent integration profiles for newsletter sign-ups.
+
+* Assign one or more compatible saved Jetpack forms to a profile.
+* Choose an EmailOctopus destination, opt-in field, field mappings, success
+  page, and outcome messages for each profile.
+* Reuse an assigned saved form on pages, posts, patterns, and other singular
+  routes while it keeps the same profile.
+* Keep unassigned or adjacent Jetpack forms under Jetpack's normal handling.
+* Check a profile's routing, field compatibility, and provider configuration
+  without disrupting unrelated profiles.
+
+Each profile is edited independently. The two-stage editor protects mappings
+and messages while form assignments or destinations are refreshed, and a stale
+tab cannot silently overwrite a newer edit to the same profile.
 
 Saved-form routing requires Jetpack to expose authoritative saved-form identity
 for submitted feedback and each active target to be published and structurally
@@ -34,14 +45,16 @@ administrator configures it.
 
 1. Install and activate Jetpack.
 2. Upload and activate RAN EmailOctopus for Jetpack Forms.
-3. Create or choose compatible published saved Jetpack forms. The Contact
+3. Configure your EmailOctopus API key in the official EmailOctopus WordPress
+   plugin. This plugin reads that plugin's `emailoctopus_api_key` setting and
+   does not provide a separate API-key field.
+4. Create or choose compatible published saved Jetpack forms. The Contact
    Newsletter Form pattern in the RAN Forms category is a suitable starting point.
-4. Go to Settings > RAN EmailOctopus and create an integration profile.
-5. Save the profile label, assigned forms, and optional destination, then
+5. Go to Settings > RAN EmailOctopus and create an integration profile.
+6. Save the profile label, assigned forms, and optional destination, then
    configure the refreshed field choices, success page, and messages.
-6. Configure recipients in Jetpack's native Form notifications settings. This
+7. Configure recipients in Jetpack's native Form notifications settings. This
    plugin does not replace Jetpack's notification email or WordPress mail path.
-7. Optionally add EmailOctopus credentials and a destination.
 8. Add [ran_emailoctopus_jetpack_forms_subscription_message] in a Shortcode
    block on the profile's success page to show its newsletter outcome message.
    A result presented on another page remains inert.
@@ -98,8 +111,12 @@ This plugin uses or can be configured to use third-party services:
 
 * Jetpack Forms provides the required form blocks. Its terms and privacy policy
   are available at https://automattic.com/legal/.
-* EmailOctopus is contacted only after a visitor opts in and an administrator
-  configures a destination. The visitor's email address and deliberately mapped
+* EmailOctopus is contacted from the administration area while an administrator
+  edits destination choices, resolves custom fields, or explicitly runs a
+  profile health check. Those requests use the API key configured through the
+  official EmailOctopus plugin and retrieve account form or list configuration;
+  they do not send visitor form values. When a visitor opts in through an
+  eligible configured form, the visitor's email address and deliberately mapped
   fields are sent to https://emailoctopus.com/api/1.6/. See
   https://emailoctopus.com/legal/privacy.
 
@@ -108,8 +125,10 @@ accounts before enabling external services.
 
 == Screenshots ==
 
-1. The integrations index and profile-specific routing status.
-2. The Contact Newsletter Form pattern in the RAN Forms category.
+1. The integrations overview, showing independent profiles, assigned saved
+   forms, routing status, and no secrets or personal data.
+2. The profile editor, showing saved-form assignment and profile-specific
+   EmailOctopus destination choices.
 
 == Changelog ==
 

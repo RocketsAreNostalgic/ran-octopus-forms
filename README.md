@@ -22,21 +22,24 @@ EmailOctopus request is made.
 
 1. Install and activate Jetpack, then activate RAN EmailOctopus for Jetpack
    Forms.
-2. Create or choose compatible published saved Jetpack forms. The supplied
+2. Configure the EmailOctopus API key in the official EmailOctopus WordPress
+   plugin. This plugin reads that plugin's `emailoctopus_api_key` setting and
+   does not provide a separate API-key field.
+3. Create or choose compatible published saved Jetpack forms. The supplied
    **Contact Newsletter Form** pattern in the **RAN Forms** category is a suitable
    starting point.
-3. In **Settings > RAN EmailOctopus**, create an integration profile. First save
+4. In **Settings > RAN EmailOctopus**, create an integration profile. First save
    its label, saved-form assignments, and optional EmailOctopus destination.
-4. After the field choices refresh, configure the profile's email and consent
+5. After the field choices refresh, configure the profile's email and consent
    sources, custom mappings, success page, and outcome messages.
-5. Reuse an assigned saved form on any route that should use its profile. A
+6. Reuse an assigned saved form on any route that should use its profile. A
    saved form can belong to only one profile.
-6. Configure the client's preferred recipients using Jetpack's native **Form
+7. Configure the client's preferred recipients using Jetpack's native **Form
    notifications** settings on the saved form. This plugin does not send the
    notification email or replace WordPress mail handling.
-7. Configure EmailOctopus only if opted-in subscribers should be sent to a
-   selected destination.
-8. Add `[ran_emailoctopus_jetpack_forms_subscription_message]` in a Shortcode
+8. Select an EmailOctopus destination only if opted-in subscribers should be
+   sent to it.
+9. Add `[ran_emailoctopus_jetpack_forms_subscription_message]` in a Shortcode
    block on each profile's success page. The one-time result identifies its
    profile and displays that profile's confirmation, subscription,
    existing-email, or problem message. A result presented on another page stays
@@ -127,8 +130,11 @@ The plugin has no bundled third-party code. See [THIRD-PARTY.md](THIRD-PARTY.md)
 for the service and licence inventory.
 
 - Jetpack Forms is a required local plugin dependency.
-- EmailOctopus receives an opted-in email address and only deliberately mapped
-  fields after an administrator configures an API key and destination.
+- While an administrator edits a destination, resolves custom fields, or runs a
+  profile health check, EmailOctopus receives authenticated requests for account
+  form or list configuration. Those requests do not include visitor form values.
+- When a visitor opts in through an eligible configured form, EmailOctopus
+  receives that visitor's email address and only deliberately mapped fields.
 
 Site administrators are responsible for provider accounts, legal notices, and
 consent before enabling external services.
