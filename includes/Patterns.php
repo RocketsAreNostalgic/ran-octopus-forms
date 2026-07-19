@@ -84,34 +84,33 @@ final class Patterns {
 
 		return trim(
 			sprintf(
-				'<!-- wp:jetpack/contact-form {"jetpackCRM":false,"variationName":"default","salesforceData":{"organizationId":"","sendToSalesforce":false},"mailpoet":{"listId":null,"listName":null,"enabledForForm":false},"className":"%1$s","layout":{"type":"flex","flexWrap":"nowrap","orientation":"vertical","justifyContent":"left","verticalAlignment":"top"}} -->
-	<div class="wp-block-jetpack-contact-form %1$s"><!-- wp:jetpack/field-name {"required":true,"fieldVariant":"name"} -->
-	<div><!-- wp:jetpack/label {"label":%2$s} /-->
+				'<!-- wp:jetpack/contact-form {"jetpackCRM":false,"variationName":"default","salesforceData":{"organizationId":"","sendToSalesforce":false},"mailpoet":{"listId":null,"listName":null,"enabledForForm":false},"layout":{"type":"flex","flexWrap":"nowrap","orientation":"vertical","justifyContent":"left","verticalAlignment":"top"}} -->
+	<div class="wp-block-jetpack-contact-form"><!-- wp:jetpack/field-name {"required":true,"fieldVariant":"name"} -->
+	<div><!-- wp:jetpack/label {"label":%1$s} /-->
 
 <!-- wp:jetpack/input /--></div>
 <!-- /wp:jetpack/field-name -->
 
 <!-- wp:jetpack/field-email {"required":true} -->
-<div><!-- wp:jetpack/label {"label":%3$s} /-->
+<div><!-- wp:jetpack/label {"label":%2$s} /-->
 
 <!-- wp:jetpack/input /--></div>
 <!-- /wp:jetpack/field-email -->
 
 <!-- wp:jetpack/field-textarea -->
-<div><!-- wp:jetpack/label {"label":%4$s} /-->
+<div><!-- wp:jetpack/label {"label":%3$s} /-->
 
 <!-- wp:jetpack/input {"type":"textarea"} /--></div>
 <!-- /wp:jetpack/field-textarea -->
 
 <!-- wp:jetpack/field-checkbox {"className":"is-style-list"} -->
-<div><!-- wp:jetpack/option {"placeholder":%5$s,"label":%6$s,"isStandalone":true} /--></div>
+<div><!-- wp:jetpack/option {"placeholder":%4$s,"label":%5$s,"isStandalone":true} /--></div>
 <!-- /wp:jetpack/field-checkbox -->
 
 <!-- wp:button {"tagName":"button","type":"submit"} -->
-<div class="wp-block-button"><button type="submit" class="wp-block-button__link wp-element-button">%7$s</button></div>
+<div class="wp-block-button"><button type="submit" class="wp-block-button__link wp-element-button">%6$s</button></div>
 <!-- /wp:button --></div>
 				<!-- /wp:jetpack/contact-form -->',
-				esc_attr( Settings::TARGET_FORM_CLASS ),
 				$name_label,
 				$email_label,
 				$message_label,

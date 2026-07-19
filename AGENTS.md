@@ -6,7 +6,7 @@ This is the standalone RAN EmailOctopus for Jetpack Forms WordPress plugin
 repository inside a larger local WordPress installation. Work in this
 directory unless the task explicitly concerns the parent site.
 
-The supported baseline is WordPress 6.5+ and PHP 8.0+. Keep the plugin header,
+The supported baseline is WordPress 6.8+ and PHP 8.0+. Keep the plugin header,
 `composer.json`, PHPCS configuration, CI, and documentation aligned whenever
 that compatibility contract changes. Do not raise that baseline as part of
 tooling or workflow work.

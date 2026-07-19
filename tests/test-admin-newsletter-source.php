@@ -30,9 +30,9 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	 * @return void
 	 */
 	public function test_newsletter_source_selector_only_lists_supported_field_types() {
-		$contact_page_id = self::factory()->post->create(
+		$target_form_id = self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
 				'post_content' => $this->get_contact_form_content(),
 			)
@@ -43,7 +43,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'   => $contact_page_id,
+					'target_form_id'    => $target_form_id,
 					'newsletter_source' => 'checkbox_opt_in',
 				)
 			)
@@ -78,7 +78,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	 * @return void
 	 */
 	public function test_source_selectors_default_to_their_only_available_fields( $newsletter_field, $newsletter_label, $newsletter_key, $option_label ) {
-		$contact_page_id = $this->create_contact_page(
+		$target_form_id = $this->create_saved_form(
 			'<!-- wp:jetpack/field-email -->
 <div><!-- wp:jetpack/label {"label":"Email address"} /--></div>
 <!-- /wp:jetpack/field-email -->
@@ -91,7 +91,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $contact_page_id,
+					'target_form_id'            => $target_form_id,
 					'emailoctopus_email_source' => '',
 					'newsletter_source'         => '',
 				)
@@ -116,7 +116,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	 * @return void
 	 */
 	public function test_source_selectors_render_a_hidden_placeholder_when_multiple_fields_are_available() {
-		$contact_page_id = $this->create_contact_page(
+		$target_form_id = $this->create_saved_form(
 			'<!-- wp:jetpack/field-email -->
 <div><!-- wp:jetpack/label {"label":"Personal email"} /--></div>
 <!-- /wp:jetpack/field-email -->
@@ -139,7 +139,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $contact_page_id,
+					'target_form_id'            => $target_form_id,
 					'emailoctopus_email_source' => '',
 					'newsletter_source'         => '',
 				)
@@ -168,7 +168,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	 * @return void
 	 */
 	public function test_stale_saved_source_preselects_the_sole_current_candidate_with_an_adjacent_warning( $select_id, $setting_key, $source, $replacement ) {
-		$contact_page_id = $this->create_contact_page(
+		$target_form_id = $this->create_saved_form(
 			'<!-- wp:jetpack/field-email -->
 <div><!-- wp:jetpack/label {"label":"Email address"} /--></div>
 <!-- /wp:jetpack/field-email -->
@@ -183,8 +183,8 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id' => $contact_page_id,
-					$setting_key      => $source,
+					'target_form_id' => $target_form_id,
+					$setting_key     => $source,
 				)
 			)
 		);
@@ -227,15 +227,15 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	}
 
 	/**
-	 * Create a contact page containing the supplied Jetpack field blocks.
+	 * Create a saved Jetpack form containing the supplied field blocks.
 	 *
 	 * @param string $fields Serialized Jetpack field blocks.
 	 * @return int
 	 */
-	private function create_contact_page( $fields ) {
+	private function create_saved_form( $fields ) {
 		return self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
 				'post_content' => $this->get_contact_form_with_fields( $fields ),
 			)

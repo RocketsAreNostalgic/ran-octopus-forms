@@ -44,18 +44,12 @@ final class EmailOctopusFieldMapper {
 	}
 
 	/**
-	 * Get Jetpack fields available on the configured contact form.
+	 * Get Jetpack fields available on the configured saved form.
 	 *
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_source_fields() {
-		$target_form_id = IntegrationResolver::get_target_form_id();
-
-		if ( IntegrationResolver::supports_portable_forms() && 0 < $target_form_id ) {
-			return self::get_source_fields_for_saved_form( $target_form_id );
-		}
-
-		return self::get_source_fields_for_contact_page( Settings::get_contact_page_id() );
+		return self::get_source_fields_for_saved_form( Settings::get_target_form_id() );
 	}
 
 	/**
@@ -72,18 +66,6 @@ final class EmailOctopusFieldMapper {
 		}
 
 		return self::get_source_fields_from_content( (string) $form->post_content );
-	}
-
-	/**
-	 * Get Jetpack fields available on a contact page.
-	 *
-	 * @param int $contact_page_id Contact page ID.
-	 * @return array<int,array<string,string>>
-	 */
-	public static function get_source_fields_for_contact_page( $contact_page_id ) {
-		$content = self::get_contact_form_content( $contact_page_id );
-
-		return self::get_source_fields_from_content( $content );
 	}
 
 	/**
@@ -121,21 +103,6 @@ final class EmailOctopusFieldMapper {
 	}
 
 	/**
-	 * Get newsletter opt-in fields on a contact page.
-	 *
-	 * @param int $contact_page_id Contact page ID.
-	 * @return array<int,array<string,string>>
-	 */
-	public static function get_newsletter_source_fields_for_contact_page( $contact_page_id ) {
-		return array_values(
-			array_filter(
-				self::get_source_fields_for_contact_page( $contact_page_id ),
-				array( __CLASS__, 'is_supported_newsletter_source_field' )
-			)
-		);
-	}
-
-	/**
 	 * Get fields that can be used as EmailOctopus email_address.
 	 *
 	 * @return array<int,array<string,string>>
@@ -159,21 +126,6 @@ final class EmailOctopusFieldMapper {
 		return array_values(
 			array_filter(
 				self::get_source_fields_for_saved_form( $form_id ),
-				array( __CLASS__, 'is_supported_email_source_field' )
-			)
-		);
-	}
-
-	/**
-	 * Get email source fields on a contact page.
-	 *
-	 * @param int $contact_page_id Contact page ID.
-	 * @return array<int,array<string,string>>
-	 */
-	public static function get_email_source_fields_for_contact_page( $contact_page_id ) {
-		return array_values(
-			array_filter(
-				self::get_source_fields_for_contact_page( $contact_page_id ),
 				array( __CLASS__, 'is_supported_email_source_field' )
 			)
 		);
@@ -327,28 +279,6 @@ final class EmailOctopusFieldMapper {
 	}
 
 	/**
-	 * Get configured contact form content.
-	 *
-	 * @return string
-	 */
-	private static function get_contact_form_content( $contact_page_id ) {
-		$page_content = get_post_field( 'post_content', $contact_page_id );
-		$form_block   = self::find_contact_form_block( parse_blocks( is_string( $page_content ) ? $page_content : '' ) );
-
-		if ( ! is_array( $form_block ) ) {
-			return '';
-		}
-
-		$ref = absint( $form_block['attrs']['ref'] ?? 0 );
-
-		if ( 0 < $ref ) {
-			return (string) get_post_field( 'post_content', $ref );
-		}
-
-		return serialize_block( $form_block );
-	}
-
-	/**
 	 * Collect source fields from serialized block content.
 	 *
 	 * @param string $content Serialized block content.
@@ -366,30 +296,6 @@ final class EmailOctopusFieldMapper {
 		}
 
 		return array_values( $fields );
-	}
-
-	/**
-	 * Find the first Jetpack contact form block.
-	 *
-	 * @param array<int,array<string,mixed>> $blocks Blocks.
-	 * @return array<string,mixed>|null
-	 */
-	private static function find_contact_form_block( $blocks ) {
-		foreach ( $blocks as $block ) {
-			if ( 'jetpack/contact-form' === ( $block['blockName'] ?? '' ) ) {
-				return $block;
-			}
-
-			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-				$inner = self::find_contact_form_block( $block['innerBlocks'] );
-
-				if ( is_array( $inner ) ) {
-					return $inner;
-				}
-			}
-		}
-
-		return null;
 	}
 
 	/**

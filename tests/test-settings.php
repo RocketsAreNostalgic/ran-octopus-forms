@@ -1,16 +1,14 @@
 <?php
 /**
- * Integration coverage for configuration and target-form ownership.
+ * Integration coverage for saved-form configuration.
  *
  * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
-use RAN\EmailOctopusJetpackForms\JetpackForms;
-use RAN\EmailOctopusJetpackForms\Patterns;
 use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
- * Ensure a fresh installation and upgraded installation stay isolated.
+ * Ensure settings require one saved Jetpack form and retain public history.
  */
 class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	/**
@@ -25,25 +23,25 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 		delete_option( Settings::LEGACY_OPTION_NAME );
 		delete_option( Settings::VERSION_OPTION );
 		$GLOBALS['wp_settings_errors'] = array();
-		$_POST                         = array();
 	}
 
 	/**
-	 * New installations must not use site-specific page paths.
+	 * New installations have no target or site-specific route defaults.
 	 *
 	 * @return void
 	 */
-	public function test_new_install_has_no_page_or_success_url_default() {
-		$this->assertSame( 0, Settings::get_contact_page_id() );
+	public function test_new_install_has_no_target_or_success_url_default() {
+		$this->assertSame( 0, Settings::get_target_form_id() );
 		$this->assertSame( '', Settings::get_success_url() );
+		$this->assertArrayNotHasKey( 'contact_page_id', Settings::get_all() );
 	}
 
 	/**
-	 * The rebranded connector copies only its own fields from the bundled option.
+	 * Rebrand migration copies EmailOctopus settings but no page ownership.
 	 *
 	 * @return void
 	 */
-	public function test_rebrand_migration_excludes_turnstile_settings_and_keeps_source() {
+	public function test_rebrand_migration_excludes_page_and_turnstile_settings() {
 		$legacy_settings = array(
 			'contact_page_id'      => 42,
 			'emailoctopus_list_id' => 'newsletter-list',
@@ -55,12 +53,34 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 		update_option( Settings::PREVIOUS_OPTION_NAME, $legacy_settings );
 		$migrated = Settings::get_all();
 
-		$this->assertSame( 42, $migrated['contact_page_id'] );
 		$this->assertSame( 'newsletter-list', $migrated['emailoctopus_list_id'] );
+		$this->assertArrayNotHasKey( 'contact_page_id', $migrated );
 		$this->assertArrayNotHasKey( 'turnstile_enabled', $migrated );
 		$this->assertArrayNotHasKey( 'turnstile_site_key', $migrated );
 		$this->assertArrayNotHasKey( 'turnstile_secret_key', $migrated );
 		$this->assertSame( $legacy_settings, get_option( Settings::PREVIOUS_OPTION_NAME ) );
+	}
+
+	/**
+	 * Obsolete page keys in an existing option are ignored.
+	 *
+	 * @return void
+	 */
+	public function test_existing_contact_page_key_is_not_exposed() {
+		update_option(
+			Settings::OPTION_NAME,
+			array(
+				'contact_page_id'      => 42,
+				'emailoctopus_list_id' => 'newsletter-list',
+			)
+		);
+		Settings::upgrade();
+
+		$settings = Settings::get_all();
+
+		$this->assertArrayNotHasKey( 'contact_page_id', $settings );
+		$this->assertArrayNotHasKey( 'contact_page_id', get_option( Settings::OPTION_NAME ) );
+		$this->assertSame( 'newsletter-list', $settings['emailoctopus_list_id'] );
 	}
 
 	/**
@@ -88,7 +108,37 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A configured EmailOctopus destination warns about unresolved newsletter sources.
+	 * A saved form is mandatory and an absent target remains visibly invalid.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_requires_a_saved_form_target() {
+		$settings = Settings::sanitize( Settings::get_defaults() );
+		$errors   = get_settings_errors( Settings::OPTION_NAME );
+
+		$this->assertSame( 0, $settings['target_form_id'] );
+		$this->assertSame( 'ran_emailoctopus_target_required', $errors[0]['code'] );
+		$this->assertSame( 'error', $errors[0]['type'] );
+	}
+
+	/**
+	 * Invalid saved IDs remain stored for diagnostics but fail validation.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_retains_an_invalid_target_for_diagnostics() {
+		$input                   = Settings::get_defaults();
+		$input['target_form_id'] = 999999;
+		$settings                = Settings::sanitize( $input );
+		$errors                  = get_settings_errors( Settings::OPTION_NAME );
+
+		$this->assertSame( 999999, $settings['target_form_id'] );
+		$this->assertSame( 'ran_emailoctopus_target_invalid', $errors[0]['code'] );
+		$this->assertSame( 'error', $errors[0]['type'] );
+	}
+
+	/**
+	 * A configured destination warns about an unresolved newsletter source.
 	 *
 	 * @dataProvider unresolved_newsletter_source_provider
 	 *
@@ -96,9 +146,9 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_sanitize_warns_and_retains_an_unresolved_newsletter_source( $newsletter_source ) {
-		$contact_page_id = $this->create_contact_page_with_default_fields();
-		$settings        = Settings::sanitize( $this->get_configured_source_settings_input( $contact_page_id, $newsletter_source ) );
-		$errors          = get_settings_errors( Settings::OPTION_NAME );
+		$form_id  = $this->create_saved_form();
+		$settings = Settings::sanitize( $this->get_configured_source_settings_input( $form_id, $newsletter_source ) );
+		$errors   = get_settings_errors( Settings::OPTION_NAME );
 
 		$this->assertSame( $newsletter_source, $settings['newsletter_source'] );
 		$this->assertCount( 1, $errors );
@@ -107,13 +157,13 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A configured destination with valid email and newsletter fields needs no source warning.
+	 * Valid saved-form source mappings need no warning.
 	 *
 	 * @return void
 	 */
-	public function test_sanitize_accepts_a_valid_email_and_newsletter_source_pair() {
-		$contact_page_id = $this->create_contact_page_with_default_fields();
-		$settings        = Settings::sanitize( $this->get_configured_source_settings_input( $contact_page_id, 'join_our_newsletter' ) );
+	public function test_sanitize_accepts_valid_saved_form_sources() {
+		$form_id  = $this->create_saved_form();
+		$settings = Settings::sanitize( $this->get_configured_source_settings_input( $form_id, 'join_our_newsletter' ) );
 
 		$this->assertSame( 'email', $settings['emailoctopus_email_source'] );
 		$this->assertSame( 'join_our_newsletter', $settings['newsletter_source'] );
@@ -121,8 +171,6 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Newsletter sources that do not identify the current checkbox field.
-	 *
 	 * @return array<string,array{string}>
 	 */
 	public function unresolved_newsletter_source_provider() {
@@ -133,189 +181,35 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The starter pattern always identifies its one intended Jetpack form.
-	 *
-	 * @return void
-	 */
-	public function test_pattern_marks_its_jetpack_form() {
-		$blocks = parse_blocks( Patterns::get_contact_form_content() );
-
-		$this->assertCount( 1, $blocks );
-		$this->assertTrue( Settings::is_target_contact_form_block( $blocks[0] ) );
-	}
-
-	/**
-	 * An inline legacy form is never rewritten during the saved-form migration.
-	 *
-	 * @return void
-	 */
-	public function test_upgrade_leaves_a_single_inline_contact_form_unchanged() {
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_name'    => 'contact-us',
-				'post_content' => '<!-- wp:jetpack/contact-form {} --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
-			)
-		);
-
-		update_option(
-			Settings::OPTION_NAME,
-			array(
-				'contact_page_id' => $page_id,
-			)
-		);
-
-		$original_content = (string) get_post_field( 'post_content', $page_id );
-		Settings::upgrade();
-
-		$this->assertSame( 0, Settings::get_target_form_id() );
-		$this->assertFalse( Settings::has_target_contact_form() );
-		$this->assertSame( $original_content, (string) get_post_field( 'post_content', $page_id ) );
-	}
-
-	/**
-	 * A legacy page with multiple forms must be left for an administrator.
-	 *
-	 * @return void
-	 */
-	public function test_upgrade_does_not_mark_an_ambiguous_contact_page() {
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form --><!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form -->',
-			)
-		);
-
-		update_option( Settings::OPTION_NAME, array( 'contact_page_id' => $page_id ) );
-		Settings::upgrade();
-
-		$this->assertFalse( Settings::has_target_contact_form() );
-		$this->assertStringNotContainsString( Settings::TARGET_FORM_CLASS, (string) get_post_field( 'post_content', $page_id ) );
-	}
-
-	/**
-	 * Settings cannot be pointed at a page without a Jetpack contact form.
-	 *
-	 * @return void
-	 */
-	public function test_sanitize_rejects_contact_page_without_a_jetpack_form() {
-		$current_page_id          = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
-			)
-		);
-		$invalid_page_id          = self::factory()->post->create(
-			array(
-				'post_type'   => 'page',
-				'post_status' => 'publish',
-			)
-		);
-		$current                  = array_merge(
-			Settings::get_defaults(),
-			array(
-				'contact_page_id' => $current_page_id,
-			)
-		);
-		$input                    = $current;
-		$input['contact_page_id'] = $invalid_page_id;
-
-		update_option( Settings::OPTION_NAME, $current );
-
-		$this->assertSame( $current, Settings::sanitize( $input ) );
-		$this->assertSame( 'ran_octopus_forms_invalid_contact_page', get_settings_errors( Settings::OPTION_NAME )[0]['code'] );
-	}
-
-	/**
-	 * Settings cannot be pointed at a page with multiple Jetpack contact forms.
-	 *
-	 * @return void
-	 */
-	public function test_sanitize_rejects_contact_page_with_multiple_jetpack_forms() {
-		$current_page_id          = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
-			)
-		);
-		$invalid_page_id          = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form --><!-- wp:jetpack/contact-form {} --><div></div><!-- /wp:jetpack/contact-form -->',
-			)
-		);
-		$current                  = array_merge(
-			Settings::get_defaults(),
-			array(
-				'contact_page_id' => $current_page_id,
-			)
-		);
-		$input                    = $current;
-		$input['contact_page_id'] = $invalid_page_id;
-
-		update_option( Settings::OPTION_NAME, $current );
-
-		$this->assertSame( $current, Settings::sanitize( $input ) );
-		$this->assertSame( 'ran_octopus_forms_invalid_contact_page', get_settings_errors( Settings::OPTION_NAME )[0]['code'] );
-	}
-
-	/**
-	 * A marker nonce prevents neighbouring Jetpack forms from receiving RAN hooks.
-	 *
-	 * @return void
-	 */
-	public function test_target_submission_requires_the_ran_marker_nonce() {
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
-			)
-		);
-
-		update_option( Settings::OPTION_NAME, array( 'contact_page_id' => $page_id ) );
-		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-
-		$_POST = array( 'contact-form-id' => (string) $page_id );
-		$this->assertFalse( JetpackForms::is_target_submission() );
-
-		$_POST['ran_octopus_forms_target'] = wp_create_nonce( 'ran_octopus_forms_target_' . $page_id );
-		$this->assertTrue( JetpackForms::is_target_submission() );
-		$this->assertFalse( JetpackForms::disable_ajax_for_contact_form( true ) );
-	}
-
-	/**
-	 * Create a contact page with the plugin's valid email and newsletter fields.
+	 * Create a valid saved Jetpack form fixture.
 	 *
 	 * @return int
 	 */
-	private function create_contact_page_with_default_fields() {
+	private function create_saved_form() {
 		return self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
+				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form">'
+					. '<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Email"} /--></div><!-- /wp:jetpack/field-email -->'
+					. '<!-- wp:jetpack/field-checkbox --><div><!-- wp:jetpack/label {"label":"Join our newsletter"} /--></div><!-- /wp:jetpack/field-checkbox -->'
+					. '</div><!-- /wp:jetpack/contact-form -->',
 			)
 		);
 	}
 
 	/**
-	 * Build valid destination settings with a caller-controlled newsletter source.
+	 * Build destination settings with a caller-controlled newsletter source.
 	 *
-	 * @param int    $contact_page_id   Contact page ID.
+	 * @param int    $form_id           Saved Jetpack form ID.
 	 * @param string $newsletter_source Submitted newsletter source key.
 	 * @return array<string,mixed>
 	 */
-	private function get_configured_source_settings_input( $contact_page_id, $newsletter_source ) {
+	private function get_configured_source_settings_input( $form_id, $newsletter_source ) {
 		return array_merge(
 			Settings::get_defaults(),
 			array(
-				'contact_page_id'           => $contact_page_id,
+				'target_form_id'            => $form_id,
 				'emailoctopus_destination'  => 'list:newsletter-list',
 				'emailoctopus_email_source' => 'email',
 				'newsletter_source'         => $newsletter_source,

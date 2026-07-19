@@ -2,17 +2,18 @@
 
 RAN EmailOctopus for Jetpack Forms adds an explicit EmailOctopus integration
 layer to one administrator-selected saved
-[Jetpack Forms](https://jetpack.com/support/jetpack-forms/) form. On supported
-Jetpack versions, the same saved form keeps one EmailOctopus destination, field
-mapping, success page, and message set wherever it is reused: pages, posts,
-patterns, and other singular routes can all reference it. No theme, site path,
-page slug, or hard-coded provider credential is assumed.
+[Jetpack Forms](https://jetpack.com/support/jetpack-forms/) form. The same saved
+form keeps one EmailOctopus destination, field mapping, success page, and
+message set wherever it is reused: pages, posts, patterns, and other singular
+routes can all reference it. No theme, site path, page slug, or hard-coded
+provider credential is assumed.
 
 ## Requirements
 
-- WordPress 6.5 or later.
+- WordPress 6.8 or later.
 - PHP 8.0 or later.
-- Jetpack, which supplies the required contact-form block.
+- Jetpack, which supplies saved contact forms and authoritative saved-form
+  identity for submitted feedback.
 
 EmailOctopus is optional. Until an administrator configures it, no
 EmailOctopus request is made.
@@ -24,9 +25,8 @@ EmailOctopus request is made.
 2. Create or choose one published saved Jetpack form. The supplied **Contact
    Newsletter Form** pattern in the **RAN Forms** category is a suitable
    starting point.
-3. In **Settings > RAN EmailOctopus**, select that saved form. Keep a contact
-   page selected as the compatibility fallback and choose the page that should
-   show the success outcome.
+3. In **Settings > RAN EmailOctopus**, select that saved form and choose the
+   page that should show the success outcome.
 4. Reuse the selected saved form on any routes that should share this
    integration. A different saved form is a different definition and is not
    included automatically.
@@ -40,24 +40,19 @@ EmailOctopus request is made.
    page and shows the configured confirmation, subscription, existing-email, or
    problem message.
 
-The saved form is the integration boundary in portable mode. Redirects,
-opt-in subscriptions, normal-post handling, and source-field discovery follow
-that form across routes. Unrelated forms, including another form on the same
-page, remain under Jetpack's normal behaviour.
+The saved form is the sole integration boundary. Redirects, opt-in
+subscriptions, normal-post handling, and source-field discovery follow that
+form across routes. Unrelated forms, including another form on the same page,
+remain under Jetpack's normal behaviour. The success destination remains one
+page for every route that embeds the selected saved form.
 
-### Portable and legacy modes
+### Saved-form routing requirements
 
-Portable mode is available only when Jetpack provides an authoritative saved
-form identity for submitted feedback and the selected target is a published,
-structurally valid `jetpack_form`. The settings page and health check show the
-active mode and the reason when portability is unavailable.
-
-On older compatible Jetpack versions, or before a saved form can be selected,
-the plugin retains its original page-scoped compatibility mode. The selected
-contact page must contain exactly one form carrying the
-`ran-octopus-forms-contact-form` marker. That legacy contact page remains saved
-as a fallback even while portable mode is active. The success destination is
-always a page in both modes.
+EmailOctopus routing runs only when Jetpack provides an authoritative saved-form
+identity for submitted feedback and the selected target is a published,
+structurally valid `jetpack_form`. There is no page-scoped fallback. The settings
+page and health check explain why routing is disabled when the capability or
+target is unavailable.
 
 An unavailable, deleted, draft, wrong-type, or structurally invalid saved-form
 target cannot receive EmailOctopus side effects. Jetpack's native notification
@@ -66,18 +61,16 @@ the integration target.
 
 ### Existing sites
 
-When upgrading from RAN Octopus Forms, the plugin copies its EmailOctopus and
-page settings to `ran_emailoctopus_jetpack_forms_settings` without deleting the
-legacy option or copying Turnstile credentials. Existing saved forms keep their
-`ran-octopus-forms-contact-form` marker, and the legacy
+When upgrading from RAN Octopus Forms, the plugin copies its EmailOctopus
+settings to `ran_emailoctopus_jetpack_forms_settings` without deleting the
+source option or copying Turnstile credentials. The legacy
 `[ran_octopus_forms_subscription_message]` shortcode remains supported.
 
-The saved-form upgrade preserves existing page IDs and records a target only
-when the already-marked contact page contains one unambiguous saved-form
-reference. Inline, missing, deleted, or ambiguous forms remain in legacy
-compatibility mode; the migration does not mark or rewrite content and does not
-discard the contact-page fallback. New installations have no default form,
-contact page, or success route.
+The upgrade does not infer a saved-form target from a page or inspect and
+rewrite content. An existing `target_form_id` remains configured when present;
+otherwise EmailOctopus routing stays disabled until an administrator selects a
+valid published saved form. Former page settings are ignored for routing. New
+installations have no default form or success route.
 
 ### Developer compatibility
 
@@ -88,7 +81,7 @@ their canonical replacements. A configured list constant may use
 `RAN_OCTOPUS_FORMS_EMAILOCTOPUS_LIST_ID` and
 `RAN_FORMS_EMAILOCTOPUS_LIST_ID` constants remain accepted as fallbacks.
 
-Portable saved-form targeting adds no new public filters. Existing compatibility
+Saved-form targeting adds no new public filters. Existing compatibility
 filters and constants retain their previous contracts.
 
 ### Notifications and competing integrations

@@ -1,22 +1,22 @@
 # Roadmap
 
 This roadmap records the possible paths for expanding RAN EmailOctopus for
-Jetpack Forms beyond its current single-form, single-route configuration. It
+Jetpack Forms beyond its current single-saved-form configuration. It
 is a planning document rather than a commitment to deliver every option.
 
 ## Current baseline
 
-The plugin currently stores one integration configuration containing:
+The implemented Option 1 baseline stores one integration configuration
+containing:
 
-- one contact page and one success page;
+- one published saved Jetpack form and one success page;
 - one EmailOctopus form or list destination;
 - one email source, newsletter consent source, and custom-field map; and
 - one set of visitor-facing subscription outcome messages.
 
-The selected contact page must contain exactly one Jetpack form. Runtime
-routing also checks that page ID, even when the form itself is a reusable
-Jetpack saved form. This keeps neighbouring forms isolated, but prevents the
-same integration from being used on other pages, posts, or routes.
+The saved form is the integration identity wherever it is embedded. Runtime
+routing signs that identity and verifies it against Jetpack's authoritative
+feedback metadata. There is no contact-page selector or page-scoped fallback.
 
 Routes should not become permanent form identifiers. Permalinks can change,
 and a saved Jetpack form can be embedded in more than one place. Future work
@@ -41,20 +41,14 @@ configuration wherever that form is embedded.
   messages, and settings option.
 - Leave unrelated Jetpack forms untouched.
 
-### Likely work
+### Implemented work
 
-- Decouple render and submission checks from the configured contact page ID.
-- Bind the marker nonce to the actual integration target.
-- Read mapping candidates from the saved Jetpack form rather than treating its
-  first embedding page as its identity.
-- Generalise success-result checks beyond `is_page()` where appropriate.
-- Update health checks and add route, post, tampering, and regression tests.
-- Preserve the current marker class and saved settings during migration.
-
-### Complexity
-
-Low. Approximately one focused development day, including tests and
-documentation.
+- Decoupled render and submission checks from any embedding page.
+- Bound signed context to the selected saved-form target and default profile.
+- Read mapping candidates directly from the saved Jetpack form.
+- Generalised success-result checks beyond `is_page()`.
+- Updated health checks and added route, post, tampering, and regression tests.
+- Preserve unrelated public extension contracts.
 
 ### Limitation
 
@@ -79,8 +73,7 @@ destination and field map.
 
 - Remove the exactly-one-form runtime restriction while retaining explicit
   ownership markers.
-- Resolve the submitted target from the signed marker instead of a page-ID
-  prefix alone.
+- Resolve the submitted target from the existing signed saved-form context.
 - Allow pages and public posts to be used as configuration sources.
 - Make field discovery select the marked form rather than the first form in
   the content tree.
@@ -142,8 +135,8 @@ support costs.
 
 ## Recommended sequence
 
-1. Implement Option 1 so the existing saved Jetpack form can be embedded on
-   multiple routes without duplicating its EmailOctopus configuration.
+1. Use the implemented Option 1 saved form across routes without duplicating
+   its EmailOctopus configuration.
 2. Consider Option 2 only when a real need arises for several compatible form
    definitions.
 3. Adopt Option 3 only when at least two forms demonstrably need different
@@ -154,10 +147,10 @@ committing prematurely to profile management and a larger administration UI.
 
 ## Compatibility requirements
 
-Any implementation should:
+Any future implementation should:
 
-- preserve the existing settings option or provide a reversible migration;
-- preserve the `ran-octopus-forms-contact-form` marker for existing content;
+- preserve the existing saved-form configuration or provide an explicit
+  migration;
 - retain the current and deprecated shortcodes, filters, and constants;
 - keep unmarked Jetpack forms isolated;
 - reject tampered or stale submission markers;

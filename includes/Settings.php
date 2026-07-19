@@ -36,11 +36,6 @@ final class Settings {
 	const EMAILOCTOPUS_FORM_ID = '';
 
 	/**
-	 * CSS class that identifies the single form owned by this integration.
-	 */
-	const TARGET_FORM_CLASS = 'ran-octopus-forms-contact-form';
-
-	/**
 	 * Option that records the completed portability upgrade.
 	 */
 	const VERSION_OPTION = 'ran_emailoctopus_jetpack_forms_version';
@@ -52,7 +47,6 @@ final class Settings {
 	 */
 	public static function get_defaults() {
 		return array(
-			'contact_page_id'                 => 0,
 			'target_form_id'                  => 0,
 			'success_page_id'                 => 0,
 			'emailoctopus_form_id'            => self::EMAILOCTOPUS_FORM_ID,
@@ -96,14 +90,14 @@ final class Settings {
 	/**
 	 * Upgrade an existing RAN Forms installation without retaining site-specific defaults.
 	 *
-	 * New installations remain deliberately unconfigured. Existing settings get
-	 * explicit page IDs only when the former conventional pages still exist.
+	 * New installations remain deliberately unconfigured. Only the global outcome
+	 * destination retains its historical conventional-page discovery.
 	 *
 	 * @return void
 	 */
 	public static function upgrade() {
 		self::migrate_legacy_settings();
-		self::migrate_saved_form_target();
+		self::remove_obsolete_contact_page_setting();
 
 		if ( ! version_compare( (string) get_option( self::VERSION_OPTION, '0.0.0' ), RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION, '<' ) ) {
 			return;
@@ -117,15 +111,6 @@ final class Settings {
 		}
 
 		$changed = false;
-
-		if ( empty( $stored['contact_page_id'] ) ) {
-			$contact_page = get_page_by_path( 'contact-us', OBJECT, 'page' );
-
-			if ( $contact_page instanceof \WP_Post ) {
-				$stored['contact_page_id'] = (int) $contact_page->ID;
-				$changed                   = true;
-			}
-		}
 
 		if ( empty( $stored['success_page_id'] ) ) {
 			$success_page = get_page_by_path( 'contact-success', OBJECT, 'page' );
@@ -144,22 +129,21 @@ final class Settings {
 	}
 
 	/**
-	 * Resolve a saved Jetpack form reference from existing page-scoped settings.
+	 * Remove the retired page-scoped target from this plugin's option.
 	 *
-	 * The raw-key check makes this migration idempotent without coupling it to a
-	 * plugin release number. Content is deliberately read-only: inline, missing,
-	 * deleted, wrong-type, and ambiguous forms remain in legacy mode.
+	 * The previous source options remain untouched for rollback/history. Only the
+	 * active option loses the obsolete key, and no content or route is scanned.
 	 *
 	 * @return void
 	 */
-	public static function migrate_saved_form_target() {
+	private static function remove_obsolete_contact_page_setting() {
 		$stored = get_option( self::OPTION_NAME, false );
 
-		if ( ! is_array( $stored ) || array_key_exists( 'target_form_id', $stored ) ) {
+		if ( ! is_array( $stored ) || ! array_key_exists( 'contact_page_id', $stored ) ) {
 			return;
 		}
 
-		$stored['target_form_id'] = self::resolve_legacy_saved_form_target( absint( $stored['contact_page_id'] ?? 0 ) );
+		unset( $stored['contact_page_id'] );
 		update_option( self::OPTION_NAME, $stored, false );
 	}
 
@@ -170,7 +154,6 @@ final class Settings {
 	 */
 	public static function get_all() {
 		self::migrate_legacy_settings();
-		self::migrate_saved_form_target();
 
 		$settings = get_option( self::OPTION_NAME, array() );
 
@@ -178,7 +161,10 @@ final class Settings {
 			$settings = array();
 		}
 
-		return wp_parse_args( $settings, self::get_defaults() );
+		$defaults = self::get_defaults();
+		$settings = array_intersect_key( $settings, $defaults );
+
+		return wp_parse_args( $settings, $defaults );
 	}
 
 	/**
@@ -209,32 +195,11 @@ final class Settings {
 	 * @return array<string,mixed>
 	 */
 	public static function sanitize( $input ) {
-		$input           = is_array( $input ) ? $input : array();
-		$current         = self::get_all();
-		$settings        = self::get_defaults();
-		$contact_page_id = absint( $input['contact_page_id'] ?? $current['contact_page_id'] ?? 0 );
-		$target_form_id  = absint( $input['target_form_id'] ?? $current['target_form_id'] ?? 0 );
+		$input          = is_array( $input ) ? $input : array();
+		$current        = self::get_all();
+		$settings       = self::get_defaults();
+		$target_form_id = absint( $input['target_form_id'] ?? $current['target_form_id'] ?? 0 );
 
-		if ( 0 < $contact_page_id ) {
-			$contact_form_count = self::get_contact_form_count_for_page( $contact_page_id );
-
-			if ( 1 !== $contact_form_count ) {
-				add_settings_error(
-					self::OPTION_NAME,
-					'ran_octopus_forms_invalid_contact_page',
-					sprintf(
-						/* translators: %d: number of Jetpack contact forms found. */
-						__( 'Cannot save settings: the selected contact page contains %d Jetpack contact forms. RAN EmailOctopus for Jetpack Forms requires exactly one.', 'ran-emailoctopus-jetpack-forms' ),
-						$contact_form_count
-					),
-					'error'
-				);
-
-				return $current;
-			}
-		}
-
-		$settings['contact_page_id'] = $contact_page_id;
 		$settings['target_form_id']  = $target_form_id;
 		$settings['success_page_id'] = absint( $input['success_page_id'] ?? 0 );
 		if ( array_key_exists( 'emailoctopus_destination', $input ) ) {
@@ -258,7 +223,8 @@ final class Settings {
 		$settings['emailoctopus_failure_message']    = sanitize_textarea_field( $input['emailoctopus_failure_message'] ?? $settings['emailoctopus_failure_message'] );
 		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? $current['newsletter_source'] ?? '' ) );
 
-		self::warn_about_invalid_source_mappings( $settings, $contact_page_id, $target_form_id );
+		self::warn_about_invalid_target( $target_form_id );
+		self::warn_about_invalid_source_mappings( $settings, $target_form_id );
 
 		return $settings;
 	}
@@ -270,23 +236,17 @@ final class Settings {
 	 * changing unrelated configuration. Subscription attempts remain paused until
 	 * both sources are valid.
 	 *
-	 * @param array<string,mixed> $settings        Sanitized settings.
-	 * @param int                 $contact_page_id Contact page ID.
-	 * @param int                 $target_form_id  Saved Jetpack form ID.
+	 * @param array<string,mixed> $settings       Sanitized settings.
+	 * @param int                 $target_form_id Saved Jetpack form ID.
 	 * @return void
 	 */
-	private static function warn_about_invalid_source_mappings( $settings, $contact_page_id, $target_form_id ) {
+	private static function warn_about_invalid_source_mappings( $settings, $target_form_id ) {
 		if ( '' === (string) ( $settings['emailoctopus_form_id'] ?? '' ) && '' === (string) ( $settings['emailoctopus_list_id'] ?? '' ) ) {
 			return;
 		}
 
-		if ( IntegrationResolver::supports_portable_forms() && 0 < $target_form_id ) {
-			$email_fields      = EmailOctopusFieldMapper::get_email_source_fields_for_saved_form( $target_form_id );
-			$newsletter_fields = EmailOctopusFieldMapper::get_newsletter_source_fields_for_saved_form( $target_form_id );
-		} else {
-			$email_fields      = EmailOctopusFieldMapper::get_email_source_fields_for_contact_page( $contact_page_id );
-			$newsletter_fields = EmailOctopusFieldMapper::get_newsletter_source_fields_for_contact_page( $contact_page_id );
-		}
+		$email_fields      = EmailOctopusFieldMapper::get_email_source_fields_for_saved_form( $target_form_id );
+		$newsletter_fields = EmailOctopusFieldMapper::get_newsletter_source_fields_for_saved_form( $target_form_id );
 
 		if ( ! self::has_valid_source_field( $email_fields, (string) ( $settings['emailoctopus_email_source'] ?? '' ) ) ) {
 			add_settings_error(
@@ -303,6 +263,38 @@ final class Settings {
 				'ran_octopus_forms_invalid_newsletter_source',
 				__( 'Newsletter opt-in source needs attention: select a current checkbox or consent field before subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
 				'warning'
+			);
+		}
+	}
+
+	/**
+	 * Report why the mandatory saved Jetpack form cannot be used.
+	 *
+	 * Invalid selections remain stored so the settings screen and health check can
+	 * explain the broken target while all EmailOctopus side effects stay disabled.
+	 *
+	 * @param int $target_form_id Saved Jetpack form ID.
+	 * @return void
+	 */
+	private static function warn_about_invalid_target( $target_form_id ) {
+		if ( 0 >= $target_form_id ) {
+			add_settings_error(
+				self::OPTION_NAME,
+				'ran_emailoctopus_target_required',
+				__( 'Select a published saved Jetpack form before EmailOctopus subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
+				'error'
+			);
+			return;
+		}
+
+		$form = get_post( $target_form_id );
+
+		if ( ! $form instanceof \WP_Post || 'jetpack_form' !== $form->post_type || 'publish' !== $form->post_status || ! self::has_valid_saved_form_structure( $target_form_id ) ) {
+			add_settings_error(
+				self::OPTION_NAME,
+				'ran_emailoctopus_target_invalid',
+				__( 'The selected target must be a published, structurally valid saved Jetpack form. EmailOctopus subscriptions are disabled until it is corrected.', 'ran-emailoctopus-jetpack-forms' ),
+				'error'
 			);
 		}
 	}
@@ -375,21 +367,6 @@ final class Settings {
 	}
 
 	/**
-	 * Get the contact page ID.
-	 *
-	 * @return int
-	 */
-	public static function get_contact_page_id() {
-		$page_id = absint( self::get( 'contact_page_id' ) );
-
-		if ( 0 < $page_id && 'page' === get_post_type( $page_id ) ) {
-			return $page_id;
-		}
-
-		return 0;
-	}
-
-	/**
 	 * Get the selected saved Jetpack form ID, including an invalid stored target.
 	 *
 	 * Keeping the raw sanitized ID lets diagnostics explain deleted, draft, and
@@ -430,80 +407,6 @@ final class Settings {
 	}
 
 	/**
-	 * Whether a Jetpack form ID belongs to the contact page.
-	 *
-	 * Jetpack derives IDs from the page ID and appends "-n" for subsequent
-	 * forms on the same page.
-	 *
-	 * @param string|int|null $form_id Jetpack contact form ID.
-	 * @return bool
-	 */
-	public static function is_contact_form_id( $form_id ) {
-		$page_id = self::get_contact_page_id();
-
-		if ( 0 >= $page_id || null === $form_id ) {
-			return false;
-		}
-
-		$form_id = (string) $form_id;
-		$base_id = (string) $page_id;
-
-		return $form_id === $base_id || 0 === strpos( $form_id, $base_id . '-' );
-	}
-
-	/**
-	 * Whether the configured contact page contains exactly one Jetpack form.
-	 *
-	 * @return bool
-	 */
-	public static function has_single_contact_form() {
-		return 1 === self::get_contact_form_count() && self::has_target_contact_form();
-	}
-
-	/**
-	 * Whether the configured page has exactly one RAN-marked Jetpack form.
-	 *
-	 * @return bool
-	 */
-	public static function has_target_contact_form() {
-		return 1 === self::count_target_contact_form_blocks( self::get_contact_form_blocks() );
-	}
-
-	/**
-	 * Count Jetpack contact forms on the configured contact page.
-	 *
-	 * @return int
-	 */
-	public static function get_contact_form_count() {
-		return self::get_contact_form_count_for_page( self::get_contact_page_id() );
-	}
-
-	/**
-	 * Count Jetpack contact forms on a specific page.
-	 *
-	 * @param int $page_id Page ID.
-	 * @return int
-	 */
-	public static function get_contact_form_count_for_page( $page_id ) {
-		return self::count_contact_form_blocks( self::get_contact_form_blocks( $page_id ) );
-	}
-
-	/**
-	 * Get the configured page's parsed blocks.
-	 *
-	 * @return array<int,array<string,mixed>>
-	 */
-	private static function get_contact_form_blocks( $page_id = null ) {
-		if ( null === $page_id ) {
-			$page_id = self::get_contact_page_id();
-		}
-
-		$content = get_post_field( 'post_content', absint( $page_id ) );
-
-		return parse_blocks( is_string( $content ) ? $content : '' );
-	}
-
-	/**
 	 * Count contact form blocks recursively.
 	 *
 	 * @param array<int,array<string,mixed>> $blocks Blocks.
@@ -523,106 +426,6 @@ final class Settings {
 		}
 
 		return $count;
-	}
-
-	/**
-	 * Count marked contact-form blocks recursively.
-	 *
-	 * @param array<int,array<string,mixed>> $blocks Blocks.
-	 * @return int
-	 */
-	private static function count_target_contact_form_blocks( $blocks ) {
-		$count = 0;
-
-		foreach ( $blocks as $block ) {
-			if ( self::is_target_contact_form_block( $block ) ) {
-				++$count;
-			}
-
-			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-				$count += self::count_target_contact_form_blocks( $block['innerBlocks'] );
-			}
-		}
-
-		return $count;
-	}
-
-	/**
-	 * Whether parsed block metadata identifies the RAN-owned form.
-	 *
-	 * @param array<string,mixed> $block Parsed block.
-	 * @return bool
-	 */
-	public static function is_target_contact_form_block( $block ) {
-		if ( 'jetpack/contact-form' !== ( $block['blockName'] ?? '' ) ) {
-			return false;
-		}
-
-		$class_name = (string) ( $block['attrs']['className'] ?? '' );
-
-		return 1 === preg_match( '/(?:^|\\s)' . preg_quote( self::TARGET_FORM_CLASS, '/' ) . '(?:\\s|$)/', $class_name );
-	}
-
-	/**
-	 * Resolve one marked saved-form reference from a legacy contact page.
-	 *
-	 * @param int $page_id Legacy contact page ID.
-	 * @return int
-	 */
-	private static function resolve_legacy_saved_form_target( $page_id ) {
-		if ( 0 >= $page_id || 'page' !== get_post_type( $page_id ) ) {
-			return 0;
-		}
-
-		$references = array();
-		self::collect_marked_saved_form_references( self::get_contact_form_blocks( $page_id ), $references );
-
-		if ( 1 !== count( $references ) ) {
-			return 0;
-		}
-
-		$form_id = absint( reset( $references ) );
-
-		return 'jetpack_form' === get_post_type( $form_id ) ? $form_id : 0;
-	}
-
-	/**
-	 * Collect marked saved-form references recursively, retaining duplicates.
-	 *
-	 * Retaining occurrences means two marked embeds remain ambiguous even when
-	 * they happen to reference the same saved form.
-	 *
-	 * @param array<int,array<string,mixed>> $blocks     Parsed blocks.
-	 * @param array<int,int>                 $references Reference accumulator.
-	 * @return void
-	 */
-	private static function collect_marked_saved_form_references( $blocks, &$references ) {
-		foreach ( $blocks as $block ) {
-			if ( self::is_target_contact_form_block( $block ) ) {
-				$reference = absint( $block['attrs']['ref'] ?? 0 );
-
-				if ( 0 < $reference ) {
-					$references[] = $reference;
-				}
-			}
-
-			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
-				self::collect_marked_saved_form_references( $block['innerBlocks'], $references );
-			}
-		}
-	}
-
-	/**
-	 * Get submitted Jetpack form ID.
-	 *
-	 * @return string
-	 */
-	public static function get_submitted_form_id() {
-		if ( ! isset( $_POST['contact-form-id'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- read-only routing check.
-			return '';
-		}
-
-		return sanitize_text_field( wp_unslash( $_POST['contact-form-id'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- read-only routing check.
 	}
 
 	/**

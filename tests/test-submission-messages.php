@@ -5,9 +5,9 @@
  * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
+use Automattic\Jetpack\Forms\ContactForm\Feedback;
 use RAN\EmailOctopusJetpackForms\EmailOctopusSubscriber;
 use RAN\EmailOctopusJetpackForms\JetpackForms;
-use RAN\EmailOctopusJetpackForms\Patterns;
 use RAN\EmailOctopusJetpackForms\Settings;
 use RAN\EmailOctopusJetpackForms\SubmissionMessages;
 
@@ -24,8 +24,9 @@ class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTes
 		parent::set_up();
 		delete_option( Settings::OPTION_NAME );
 		delete_option( 'emailoctopus_api_key' );
-		$_GET  = array();
-		$_POST = array();
+		Feedback::$form_ids = array();
+		$_GET               = array();
+		$_POST              = array();
 	}
 
 	/**
@@ -86,11 +87,11 @@ class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTes
 	 * @return void
 	 */
 	public function test_pending_result_is_rendered_once_on_the_success_page() {
-		$contact_page_id = self::factory()->post->create(
+		$form_id         = self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
+				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
 			)
 		);
 		$success_page_id = self::factory()->post->create(
@@ -107,19 +108,17 @@ class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTes
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id' => $contact_page_id,
+					'target_form_id'  => $form_id,
 					'success_page_id' => $success_page_id,
 				)
 			)
 		);
 		update_post_meta( $feedback_id, '_ran_emailoctopus_subscription_status', 'pending' );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$_POST = array(
-			'contact-form-id'          => (string) $contact_page_id,
-			'ran_octopus_forms_target' => wp_create_nonce( 'ran_octopus_forms_target_' . $contact_page_id ),
-		);
+		$_POST                              = $this->get_signed_context( $form_id );
+		Feedback::$form_ids[ $feedback_id ] = $form_id;
 
-		$redirect = JetpackForms::redirect_contact_form( 'https://example.org/contact-us/', $contact_page_id, $feedback_id );
+		$redirect = JetpackForms::redirect_contact_form( 'https://example.org/contact-us/', 0, $feedback_id );
 		$token    = wp_parse_url( $redirect, PHP_URL_QUERY );
 
 		parse_str( is_string( $token ) ? $token : '', $query_args );
@@ -132,5 +131,30 @@ class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTes
 
 		$this->assertStringContainsString( 'There’s one more step', do_blocks( $success_page_content ) );
 		$this->assertSame( '', do_blocks( $success_page_content ) );
+	}
+
+	/**
+	 * Render and extract the signed integration context for one saved form.
+	 *
+	 * @param int $form_id Saved form ID.
+	 * @return array<string,string>
+	 */
+	private function get_signed_context( $form_id ) {
+		$block = array(
+			'blockName' => 'jetpack/contact-form',
+			'attrs'     => array( 'ref' => $form_id ),
+		);
+
+		JetpackForms::before_render_block( null, $block );
+		$html = JetpackForms::mark_target_form_submission( '<form></form>' );
+		JetpackForms::after_render_block( '', $block );
+		preg_match_all( '/name="([^"]+)" value="([^"]*)"/', $html, $matches, PREG_SET_ORDER );
+		$context = array();
+
+		foreach ( $matches as $match ) {
+			$context[ $match[1] ] = html_entity_decode( $match[2], ENT_QUOTES );
+		}
+
+		return $context;
 	}
 }

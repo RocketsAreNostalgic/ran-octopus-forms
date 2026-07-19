@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class JetpackForms {
 	/**
-	 * Existing marker field retained for cached and legacy forms.
+	 * Nonce field signing the portable form context.
 	 */
 	const TARGET_FIELD = 'ran_octopus_forms_target';
 
@@ -36,13 +36,6 @@ final class JetpackForms {
 	 * @var array{profile_id:string,form_ref:int,depth:int}|null
 	 */
 	private static $portable_render_context = null;
-
-	/**
-	 * Whether the current block render is the legacy marked RAN form.
-	 *
-	 * @var bool
-	 */
-	private static $rendering_legacy_target_form = false;
 
 	/**
 	 * Register hooks.
@@ -71,28 +64,24 @@ final class JetpackForms {
 			return $pre_render;
 		}
 
-		if ( IntegrationResolver::is_portable_available() ) {
-			$form_ref = self::get_block_form_ref( $parsed_block );
-
-			if ( 0 < $form_ref && IntegrationResolver::is_target_form_id( $form_ref ) ) {
-				$profile = IntegrationResolver::get_default_profile();
-
-				if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
-					++self::$portable_render_context['depth'];
-				} else {
-					self::$portable_render_context = array(
-						'profile_id' => $profile->get_id(),
-						'form_ref'   => $form_ref,
-						'depth'      => 1,
-					);
-				}
-			}
-
+		if ( ! IntegrationResolver::is_portable_available() ) {
 			return $pre_render;
 		}
 
-		if ( self::uses_legacy_mode() && is_page( Settings::get_contact_page_id() ) && Settings::is_target_contact_form_block( $parsed_block ) ) {
-			self::$rendering_legacy_target_form = true;
+		$form_ref = self::get_block_form_ref( $parsed_block );
+
+		if ( 0 < $form_ref && IntegrationResolver::is_target_form_id( $form_ref ) ) {
+			$profile = IntegrationResolver::get_default_profile();
+
+			if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
+				++self::$portable_render_context['depth'];
+			} else {
+				self::$portable_render_context = array(
+					'profile_id' => $profile->get_id(),
+					'form_ref'   => $form_ref,
+					'depth'      => 1,
+				);
+			}
 		}
 
 		return $pre_render;
@@ -114,8 +103,6 @@ final class JetpackForms {
 			if ( 0 >= self::$portable_render_context['depth'] ) {
 				self::$portable_render_context = null;
 			}
-		} elseif ( self::uses_legacy_mode() && Settings::is_target_contact_form_block( $parsed_block ) ) {
-			self::$rendering_legacy_target_form = false;
 		}
 
 		return $block_content;
@@ -131,7 +118,7 @@ final class JetpackForms {
 	 * @return bool
 	 */
 	public static function disable_ajax_for_contact_form( $enabled ) {
-		if ( null !== self::$portable_render_context || self::$rendering_legacy_target_form || self::is_target_submission() ) {
+		if ( null !== self::$portable_render_context || self::is_target_submission() ) {
 			return false;
 		}
 
@@ -149,25 +136,17 @@ final class JetpackForms {
 			return $form_html;
 		}
 
-		if ( null !== self::$portable_render_context ) {
-			$profile_id = self::$portable_render_context['profile_id'];
-			$form_ref   = self::$portable_render_context['form_ref'];
-			$marker     = sprintf(
-				'<input type="hidden" name="%1$s" value="%2$s" /><input type="hidden" name="%3$s" value="%4$d" /><input type="hidden" name="%5$s" value="%6$s" />',
-				esc_attr( self::PROFILE_FIELD ),
-				esc_attr( $profile_id ),
-				esc_attr( self::FORM_REF_FIELD ),
-				$form_ref,
-				esc_attr( self::TARGET_FIELD ),
-				esc_attr( wp_create_nonce( self::get_portable_nonce_action( $profile_id, $form_ref ) ) )
-			);
-		} else {
-			$marker = sprintf(
-				'<input type="hidden" name="%1$s" value="%2$s" />',
-				esc_attr( self::TARGET_FIELD ),
-				esc_attr( wp_create_nonce( self::get_legacy_nonce_action() ) )
-			);
-		}
+		$profile_id = self::$portable_render_context['profile_id'];
+		$form_ref   = self::$portable_render_context['form_ref'];
+		$marker     = sprintf(
+			'<input type="hidden" name="%1$s" value="%2$s" /><input type="hidden" name="%3$s" value="%4$d" /><input type="hidden" name="%5$s" value="%6$s" />',
+			esc_attr( self::PROFILE_FIELD ),
+			esc_attr( $profile_id ),
+			esc_attr( self::FORM_REF_FIELD ),
+			$form_ref,
+			esc_attr( self::TARGET_FIELD ),
+			esc_attr( wp_create_nonce( self::get_portable_nonce_action( $profile_id, $form_ref ) ) )
+		);
 
 		return str_replace( '</form>', $marker . '</form>', $form_html );
 	}
@@ -179,15 +158,9 @@ final class JetpackForms {
 	 * @return bool
 	 */
 	public static function is_target_form_html( $form_html ) {
-		if ( IntegrationResolver::is_portable_available() ) {
-			return null !== self::$portable_render_context;
-		}
+		unset( $form_html );
 
-		if ( ! self::uses_legacy_mode() ) {
-			return false;
-		}
-
-		return Settings::has_single_contact_form() && ( self::$rendering_legacy_target_form || false !== strpos( $form_html, Settings::TARGET_FORM_CLASS ) );
+		return IntegrationResolver::is_portable_available() && null !== self::$portable_render_context;
 	}
 
 	/**
@@ -296,49 +269,33 @@ final class JetpackForms {
 	/**
 	 * Parse and verify the submitted integration context.
 	 *
-	 * @return array{profile_id:string,form_ref:int,mode:string}|null
+	 * @return array{profile_id:string,form_ref:int}|null
 	 */
 	private static function get_submitted_context() {
 		if ( ! isset( $_POST[ self::TARGET_FIELD ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verification occurs below.
 			return null;
 		}
 
-		$has_profile  = isset( $_POST[ self::PROFILE_FIELD ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
-		$has_form_ref = isset( $_POST[ self::FORM_REF_FIELD ] ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
-		$nonce        = sanitize_text_field( wp_unslash( $_POST[ self::TARGET_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- this is the nonce being verified.
-
-		if ( $has_profile || $has_form_ref ) {
-			if ( ! $has_profile || ! $has_form_ref || ! IntegrationResolver::is_portable_available() ) {
-				return null;
-			}
-
-			$profile_id = sanitize_key( wp_unslash( $_POST[ self::PROFILE_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
-			$form_ref   = absint( wp_unslash( $_POST[ self::FORM_REF_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
-			$profile    = IntegrationResolver::get_profile( $profile_id );
-
-			if ( null === $profile || ! in_array( $form_ref, $profile->get_target_form_ids(), true ) || ! IntegrationResolver::is_target_form_id( $form_ref ) ) {
-				return null;
-			}
-
-			if ( ! wp_verify_nonce( $nonce, self::get_portable_nonce_action( $profile_id, $form_ref ) ) ) {
-				return null;
-			}
-
-			return array(
-				'profile_id' => $profile_id,
-				'form_ref'   => $form_ref,
-				'mode'       => 'portable',
-			);
+		if ( ! isset( $_POST[ self::PROFILE_FIELD ], $_POST[ self::FORM_REF_FIELD ] ) || ! IntegrationResolver::is_portable_available() ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+			return null;
 		}
 
-		if ( ! self::accepts_legacy_submission_context() || ! Settings::has_single_contact_form() || ! Settings::is_contact_form_id( Settings::get_submitted_form_id() ) || ! wp_verify_nonce( $nonce, self::get_legacy_nonce_action() ) ) {
+		$nonce      = sanitize_text_field( wp_unslash( $_POST[ self::TARGET_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- this is the nonce being verified.
+		$profile_id = sanitize_key( wp_unslash( $_POST[ self::PROFILE_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+		$form_ref   = absint( wp_unslash( $_POST[ self::FORM_REF_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+		$profile    = IntegrationResolver::get_profile( $profile_id );
+
+		if ( null === $profile || ! in_array( $form_ref, $profile->get_target_form_ids(), true ) || ! IntegrationResolver::is_target_form_id( $form_ref ) ) {
+			return null;
+		}
+
+		if ( ! wp_verify_nonce( $nonce, self::get_portable_nonce_action( $profile_id, $form_ref ) ) ) {
 			return null;
 		}
 
 		return array(
-			'profile_id' => IntegrationResolver::get_default_profile()->get_id(),
-			'form_ref'   => IntegrationResolver::get_target_form_id(),
-			'mode'       => 'legacy',
+			'profile_id' => $profile_id,
+			'form_ref'   => $form_ref,
 		);
 	}
 
@@ -346,16 +303,12 @@ final class JetpackForms {
 	 * Verify Jetpack's authoritative saved-form identity against signed context.
 	 *
 	 * @param int                                         $feedback_id Feedback post ID.
-	 * @param array{profile_id:string,form_ref:int,mode:string} $context Signed context.
+	 * @param array{profile_id:string,form_ref:int} $context Signed context.
 	 * @return bool
 	 */
 	private static function feedback_matches_context( $feedback_id, $context ) {
 		if ( 0 >= $feedback_id ) {
 			return false;
-		}
-
-		if ( ! IntegrationResolver::supports_portable_forms() ) {
-			return 'portable' !== $context['mode'];
 		}
 
 		$feedback_form_id = self::get_feedback_form_id( $feedback_id );
@@ -364,11 +317,7 @@ final class JetpackForms {
 			return false;
 		}
 
-		if ( 0 < $context['form_ref'] ) {
-			return $context['form_ref'] === $feedback_form_id;
-		}
-
-		return 'legacy' === $context['mode'] && 0 === $feedback_form_id;
+		return $context['form_ref'] === $feedback_form_id;
 	}
 
 	/**
@@ -413,31 +362,6 @@ final class JetpackForms {
 	}
 
 	/**
-	 * Whether page-scoped compatibility routing should remain active.
-	 *
-	 * A non-zero invalid saved-form target is an explicit broken configuration,
-	 * so it must fail closed instead of silently reviving page-scoped side effects.
-	 *
-	 * @return bool
-	 */
-	private static function uses_legacy_mode() {
-		return ! IntegrationResolver::supports_portable_forms() || 0 === IntegrationResolver::get_target_form_id();
-	}
-
-	/**
-	 * Whether a cached page-scoped marker may still reach identity verification.
-	 *
-	 * Portable configurations accept the old signed page marker during cache
-	 * rollover, then require the feedback's saved-form ID to match. Explicitly
-	 * invalid non-zero targets remain fail-closed.
-	 *
-	 * @return bool
-	 */
-	private static function accepts_legacy_submission_context() {
-		return IntegrationResolver::is_portable_available() || self::uses_legacy_mode();
-	}
-
-	/**
 	 * Get the nonce action binding a portable profile and saved form.
 	 *
 	 * @param string $profile_id Integration profile ID.
@@ -446,15 +370,6 @@ final class JetpackForms {
 	 */
 	private static function get_portable_nonce_action( $profile_id, $form_ref ) {
 		return 'ran_octopus_forms_target_' . sanitize_key( $profile_id ) . '_' . absint( $form_ref );
-	}
-
-	/**
-	 * Get the legacy page-scoped nonce action.
-	 *
-	 * @return string
-	 */
-	private static function get_legacy_nonce_action() {
-		return 'ran_octopus_forms_target_' . Settings::get_contact_page_id();
 	}
 
 	/**

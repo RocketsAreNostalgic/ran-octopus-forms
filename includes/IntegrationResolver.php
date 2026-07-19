@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Resolves the route-independent default profile and portable capability.
+ * Resolves the route-independent default profile and availability gate.
  */
 final class IntegrationResolver {
 	/**
@@ -38,7 +38,6 @@ final class IntegrationResolver {
 			self::DEFAULT_PROFILE_ID,
 			$form_ids,
 			array(
-				'contact_page_id'                 => Settings::get_contact_page_id(),
 				'success_url'                     => Settings::get_success_url(),
 				'emailoctopus_form_id'            => Settings::get_emailoctopus_form_id(),
 				'emailoctopus_list_id'            => Settings::get_emailoctopus_list_id(),
@@ -146,7 +145,7 @@ final class IntegrationResolver {
 	 * @return int
 	 */
 	public static function get_target_form_id() {
-		return self::get_default_profile()->get_target_form_id();
+		return Settings::get_target_form_id();
 	}
 
 	/**
@@ -156,6 +155,6 @@ final class IntegrationResolver {
 	 * @return bool
 	 */
 	public static function is_target_form_id( $form_id ) {
-		return self::is_portable_available() && in_array( absint( $form_id ), self::get_default_profile()->get_form_ids(), true );
+		return self::is_portable_available() && absint( $form_id ) === self::get_target_form_id();
 	}
 }

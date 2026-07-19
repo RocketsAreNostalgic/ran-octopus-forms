@@ -51,7 +51,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 
 		$this->assertSame( 'error', $rows[0]['status'] );
 		$this->assertStringContainsString( $expected_message, $rows[0]['message'] );
-		$this->assertStringContainsString( 'EmailOctopus side effects are paused', $rows[0]['message'] );
+		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $rows[0]['message'] );
 	}
 
 	/**
@@ -67,26 +67,18 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 	}
 
 	/**
-	 * Mapping checks read the portable saved form rather than the fallback page.
+	 * Mapping checks read the selected saved form without a page target.
 	 *
 	 * @return void
 	 */
 	public function test_mapping_health_uses_selected_saved_form_fields() {
 		$form_id = $this->create_saved_form( 'publish', true );
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form --><div><!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Legacy email"} /--></div><!-- /wp:jetpack/field-email --></div><!-- /wp:jetpack/contact-form -->',
-			)
-		);
 
 		update_option(
 			Settings::OPTION_NAME,
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $page_id,
 					'target_form_id'            => $form_id,
 					'emailoctopus_email_source' => 'portable_email',
 					'newsletter_source'         => 'portable_opt_in',
@@ -103,26 +95,25 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 		$this->assertSame( 'pass', $newsletter_check['status'] );
 		$this->assertStringContainsString( 'Portable opt-in', $newsletter_check['message'] );
 		$this->assertSame( 'pass', $target_checks[0]['status'] );
-		$this->assertStringContainsString( 'Portable saved-form mode', $target_checks[0]['message'] );
+		$this->assertStringContainsString( 'Saved-form routing is active', $target_checks[0]['message'] );
 	}
 
 	/**
-	 * A missing fallback warns but does not invalidate active portable targeting.
+	 * Missing selection is an error and mapping checks are skipped.
 	 *
 	 * @return void
 	 */
-	public function test_portable_mode_warns_when_legacy_contact_page_fallback_is_missing() {
-		$form_id = $this->create_saved_form( 'publish', true );
-		update_option(
-			Settings::OPTION_NAME,
-			array_merge( Settings::get_defaults(), array( 'target_form_id' => $form_id ) )
-		);
+	public function test_missing_saved_form_disables_routing() {
+		update_option( Settings::OPTION_NAME, Settings::get_defaults() );
 
-		$rows = $this->invoke_health_method( 'check_pages' );
+		$target_rows = $this->invoke_health_method( 'check_integration_target' );
+		$form_rows   = $this->invoke_health_method( 'check_contact_form' );
 
-		$this->assertSame( 'warning', $rows[0]['status'] );
-		$this->assertSame( 'Legacy contact page fallback', $rows[0]['label'] );
-		$this->assertStringContainsString( 'downgrade', $rows[0]['message'] );
+		$this->assertSame( 'error', $target_rows[0]['status'] );
+		$this->assertStringContainsString( 'No saved form is selected', $target_rows[0]['message'] );
+		$this->assertStringContainsString( 'routing remains disabled', $target_rows[0]['message'] );
+		$this->assertSame( 'skipped', $form_rows[0]['status'] );
+		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $form_rows[0]['message'] );
 	}
 
 	/**

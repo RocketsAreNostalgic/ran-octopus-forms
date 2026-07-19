@@ -10,7 +10,7 @@
  * Author URI: https://github.com/RocketsAreNostalgic/
  * Text Domain: ran-emailoctopus-jetpack-forms
  * Domain Path: /languages
- * Requires at least: 6.5
+ * Requires at least: 6.8
  * Requires PHP: 8.0
  * Requires Plugins: jetpack
  * License: GPL-2.0-or-later

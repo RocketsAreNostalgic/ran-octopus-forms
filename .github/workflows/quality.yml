@@ -31,17 +31,11 @@ jobs:
             matrix:
                 include:
                     - php: '8.0'
-                      wordpress: '6.5'
-                      jetpack: '13.3.1'
-                      portable: 'false'
-                    - php: '8.0'
                       wordpress: '6.8'
                       jetpack: '15.5'
-                      portable: 'true'
                     - php: '8.3'
                       wordpress: 'latest'
                       jetpack: 'latest'
-                      portable: 'true'
         steps:
             - uses: actions/checkout@v4
             - uses: shivammathur/setup-php@v2
@@ -87,7 +81,7 @@ jobs:
                   archive=$(sh scripts/release-archive-path.sh /tmp/ran-emailoctopus-jetpack-forms-release)
                   wp plugin install "$archive" --path="$fresh_root" --activate
                   wp plugin is-active ran-emailoctopus-jetpack-forms --path="$fresh_root"
-                  RAN_EXPECT_PORTABLE='${{ matrix.portable }}' wp eval-file "$GITHUB_WORKSPACE/scripts/smoke-saved-form.php" --path="$fresh_root"
+                  wp eval-file "$GITHUB_WORKSPACE/scripts/smoke-saved-form.php" --path="$fresh_root"
 
     plugin-check-and-release:
         runs-on: ubuntu-latest

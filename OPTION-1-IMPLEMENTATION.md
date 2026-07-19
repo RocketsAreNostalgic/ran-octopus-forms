@@ -7,10 +7,11 @@ published Jetpack `jetpack_form` reference. The same saved form can be embedded
 on any page, post, pattern, or singular route while retaining one EmailOctopus
 destination, field mapping, success page, and message set.
 
-Portable mode is capability-gated. When Jetpack exposes authoritative saved-form
-identity on feedback, the selected saved form is the integration boundary. On
-older compatible WordPress and Jetpack versions, the plugin retains its current
-page-scoped behaviour.
+Saved-form routing is mandatory. The plugin requires WordPress 6.8+ and a
+Jetpack Forms version that exposes authoritative saved-form identity on
+feedback. If either the selected form or that identity is unavailable, the
+EmailOctopus side effect is disabled while Jetpack's native form handling is
+left alone.
 
 ## Dex tree
 
@@ -26,52 +27,60 @@ page-scoped behaviour.
 Every child must be completed with its validation result and implementing commit
 SHA before the parent is completed.
 
+The original tree above records the implementation work. A corrective Dex tree
+removed the page-scoped compatibility layer after the site owner confirmed that
+no legacy support was required:
+
+| ID         | Task                                         | Dependencies |
+| ---------- | -------------------------------------------- | ------------ |
+| `vdq547qo` | Remove legacy page-scoped form support       | Parent       |
+| `stmyn8vo` | Remove page settings and legacy routing      | None         |
+| `2c8hpl0a` | Simplify admin diagnostics and documentation | `stmyn8vo`   |
+| `isdhhbs1` | Raise baseline and reprove release           | `2c8hpl0a`   |
+
 ## Locked contract
 
 - Add `target_form_id` to the existing flat settings option.
-- If the raw option lacks that key, resolve the legacy contact page's single
-  marked `jetpack/contact-form` saved-form reference once. Store `0` when the
-  result is absent or ambiguous, preserve `contact_page_id`, and never rewrite
-  post content.
+- Do not retain, migrate, or infer a target from `contact_page_id`. Remove that
+  obsolete key from stored settings during upgrade and never rewrite content.
 - Model the current configuration internally as profile `default`, whose target
   forms are exposed as a collection containing the selected saved-form ID.
-- Enable portable mode only when the selected target is a published
+- Enable EmailOctopus routing only when the selected target is a published
   `jetpack_form` and Jetpack exposes authoritative saved-form identity on
-  feedback. Otherwise retain page-scoped legacy routing and report the reason.
+  feedback. Otherwise report why the integration is paused.
 - Bind the profile ID, saved-form reference, and marker nonce into signed form
   context. Verify that context and Jetpack's authoritative feedback form ID
   before any EmailOctopus side effect or integration redirect.
-- Preserve the legacy page nonce for cached forms. When authoritative feedback
-  identity is available, it must still match the configured target.
 - Carry the profile ID through the one-time outcome token without changing the
   public redirect query-string format.
-- Use the selected saved form as the source for field discovery and mapping
-  health in portable mode. Invalid, deleted, draft, wrong-type, or structurally
+- Use the selected saved form as the sole source for field discovery and mapping
+  health. Invalid, deleted, draft, wrong-type, or structurally
   invalid targets disable EmailOctopus side effects without disrupting Jetpack's
   native notifications.
-- Preserve existing shortcodes, marker classes, option history, filters,
+- Preserve existing shortcodes, option history, filters,
   constants, EmailOctopus behaviour, and spam/trash rejection. Option 1 adds no
   public developer filters.
 
 ## Locked defaults
 
-- Do not raise the WordPress 6.5 or PHP 8.0 plugin baseline.
+- Require WordPress 6.8+ and PHP 8.0+.
 - Do not convert inline forms or scan and rewrite routes.
 - Keep one global success page and one EmailOctopus configuration.
-- Keep the contact page as a compatibility fallback.
+- Provide no contact-page selector or page-scoped compatibility fallback.
 - Option 1 supports one saved form across multiple routes. Distinct form
   definitions and per-form settings remain Options 2 and 3.
 - Keep this file and `ROADMAP.md` repository-only and outside release archives.
 
 ## Acceptance criteria
 
-### Migration and resolution
+### Resolution
 
-- A single marked saved-form reference migrates once while legacy settings and
-  content remain unchanged.
-- Inline, missing, deleted, and ambiguous forms resolve to `0` and stay in
-  legacy mode.
-- The current site resolves contact page `6236` to saved form `6243`.
+- The configured `target_form_id` resolves only when it references one published
+  `jetpack_form`.
+- Inline, missing, deleted, draft, wrong-type, and structurally invalid targets
+  pause EmailOctopus processing without altering content.
+- The current site selects saved form `6243` directly; page `6236` has no role
+  in integration identity.
 
 ### Routing and security
 
@@ -79,7 +88,7 @@ SHA before the parent is completed.
   signed `default` context and use the same integration profile.
 - Unrelated and adjacent forms remain untouched, and render context resets after
   each form.
-- Missing, stale, changed, tampered, or mismatched profile/reference/nonce data
+- Missing, stale, changed, tampered, or mismatched profile/reference/signature data
   fails closed.
 - A valid marker paired with feedback for another saved form fails closed.
 - Spam or trash feedback never produces an EmailOctopus request.
@@ -88,9 +97,8 @@ SHA before the parent is completed.
 
 - Valid submissions from both routes use the existing field mappings and global
   success page while Jetpack retains route-source metadata.
-- The WordPress 6.5/Jetpack 13.3.1 legacy lane remains supported.
-- WordPress 6.8/Jetpack 15.5 portable coverage is added alongside the latest
-  compatibility lane.
+- WordPress 6.8/Jetpack 15.5 and the latest WordPress/Jetpack compatibility lanes
+  cover saved-form routing.
 - PHPCS, PHPUnit, package checks, translation freshness, deterministic release
   verification, Plugin Check, clean-ZIP activation, and version-specific saved
   form smoke checks pass.

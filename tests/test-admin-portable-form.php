@@ -9,7 +9,7 @@ use RAN\EmailOctopusJetpackForms\Admin;
 use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
- * Ensure the saved form is primary while legacy page configuration is retained.
+ * Ensure the saved form is the sole EmailOctopus target.
  */
 class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTestCase {
 	/**
@@ -25,26 +25,18 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 	}
 
 	/**
-	 * Portable capability exposes the saved form ahead of fallback page fields.
+	 * The settings page exposes only saved-form targeting and the success page.
 	 *
 	 * @return void
 	 */
 	public function test_saved_form_selector_is_primary_and_mapping_uses_its_fields() {
 		$form_id = $this->create_saved_form( 'Portable address', 'Portable opt-in' );
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => $this->get_reference_content( $form_id ),
-			)
-		);
 
 		update_option(
 			Settings::OPTION_NAME,
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $page_id,
 					'target_form_id'            => $form_id,
 					'emailoctopus_email_source' => 'portable_address',
 					'newsletter_source'         => 'portable_opt_in',
@@ -54,14 +46,11 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 
 		$markup = $this->render_settings_page();
 
-		$this->assertStringContainsString( 'Portable saved-form mode is active', $markup );
+		$this->assertStringContainsString( 'Saved-form routing is active', $markup );
 		$this->assertStringContainsString( 'name="ran_emailoctopus_jetpack_forms_settings[target_form_id]"', $markup );
 		$this->assertMatchesRegularExpression( '#<option value="' . $form_id . '"[^>]*selected[^>]*>Portable form \(\#' . $form_id . '\)</option>#', $markup );
-		$this->assertStringContainsString( 'Legacy contact page fallback', $markup );
-		$this->assertLessThan(
-			strpos( $markup, 'ran-emailoctopus-jetpack-forms-contact-page' ),
-			strpos( $markup, 'ran-emailoctopus-jetpack-forms-target-form' )
-		);
+		$this->assertStringNotContainsString( 'contact_page_id', $markup );
+		$this->assertStringNotContainsString( 'ran-emailoctopus-jetpack-forms-contact-page', $markup );
 		$this->assertStringContainsString( 'value="portable_address"', $markup );
 		$this->assertStringContainsString( 'value="portable_opt_in"', $markup );
 	}
@@ -81,10 +70,10 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 
 		$markup = $this->render_settings_page();
 
-		$this->assertStringContainsString( 'EmailOctopus routing is paused', $markup );
+		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $markup );
 		$this->assertStringContainsString( 'not published', $markup );
 		$this->assertStringContainsString( 'Unavailable saved form (#' . $form_id . ')', $markup );
-		$this->assertStringContainsString( 'EmailOctopus side effects are paused', $markup );
+		$this->assertStringContainsString( 'EmailOctopus routing remains disabled', $markup );
 	}
 
 	/**
@@ -115,13 +104,5 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Portable_Form_Test extends WP_UnitTes
 					. '</div><!-- /wp:jetpack/contact-form -->',
 			)
 		);
-	}
-
-	/**
-	 * @param int $form_id Saved form ID.
-	 * @return string
-	 */
-	private function get_reference_content( $form_id ) {
-		return '<!-- wp:jetpack/contact-form {"ref":' . absint( $form_id ) . ',"className":"' . Settings::TARGET_FORM_CLASS . '"} /-->';
 	}
 }

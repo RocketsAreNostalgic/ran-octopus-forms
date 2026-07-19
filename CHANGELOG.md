@@ -37,9 +37,9 @@
 
 ## 1.0.0
 
-- First public release for WordPress 6.5+ and PHP 8.0+.
-- Added an explicit RAN marker so integrations apply only to the intended
-  Jetpack form.
+- First public release for WordPress 6.8+ and PHP 8.0+.
+- Added saved-form targeting so integrations apply only to the selected
+  reusable Jetpack form across routes.
 - Added WordPress.org metadata, translations, release validation and quality
   tooling.
-- Removed legacy site-path defaults for new installations.
+- Kept routing independent of page paths and embedding routes.

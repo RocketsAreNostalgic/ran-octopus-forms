@@ -71,6 +71,26 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 		$this->assertSame( '<form></form>', $this->render_form_html( $other_form ) );
 	}
 
+	/**
+	 * An unconfigured integration never changes Jetpack form behavior.
+	 *
+	 * @return void
+	 */
+	public function test_missing_saved_form_target_adds_no_marker_or_ajax_change() {
+		$form_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'jetpack_form',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
+			)
+		);
+		update_option( Settings::OPTION_NAME, Settings::get_defaults() );
+
+		$this->assertSame( '<form></form>', $this->render_form_html( $form_id ) );
+		$this->assertTrue( JetpackForms::disable_ajax_for_contact_form( true ) );
+		$this->assertFalse( JetpackForms::is_target_submission() );
+	}
+
 		/**
 		 * Signed context must agree with Jetpack's authoritative feedback form ID.
 		 *
@@ -163,7 +183,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 	}
 
 	/**
-	 * A selected but invalid saved form disables both portable and legacy paths.
+	 * A selected but invalid saved form disables all side-effect routing.
 	 *
 	 * @dataProvider invalid_target_provider
 	 *
@@ -172,7 +192,6 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 	 */
 	public function test_nonzero_invalid_target_disables_side_effect_routing( $invalidity ) {
 		$form_id = $this->configure_portable_form();
-		$page_id = absint( Settings::get( 'contact_page_id' ) );
 
 		if ( 'draft' === $invalidity ) {
 			wp_update_post(
@@ -191,8 +210,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 		}
 
 		$_POST = array(
-			'contact-form-id'          => (string) $page_id,
-			JetpackForms::TARGET_FIELD => wp_create_nonce( 'ran_octopus_forms_target_' . $page_id ),
+			JetpackForms::TARGET_FIELD => 'unsigned-without-profile-or-ref',
 		);
 
 		$this->assertFalse( IntegrationResolver::is_portable_available() );
@@ -209,28 +227,6 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 			'draft target'                 => array( 'draft' ),
 			'invalid saved-form structure' => array( 'structure' ),
 		);
-	}
-
-		/**
-		 * Cached legacy markers remain valid but must match authoritative identity.
-		 *
-		 * @return void
-		 */
-	public function test_cached_legacy_marker_requires_authoritative_saved_form_match() {
-		$form_id     = $this->configure_portable_form();
-		$page_id     = absint( Settings::get( 'contact_page_id' ) );
-		$feedback_id = self::factory()->post->create();
-
-		$_POST = array(
-			'contact-form-id'          => (string) $page_id,
-			JetpackForms::TARGET_FIELD => wp_create_nonce( 'ran_octopus_forms_target_' . $page_id ),
-		);
-
-		Feedback::$form_ids[ $feedback_id ] = $form_id;
-		$this->assertTrue( JetpackForms::is_target_submission( $feedback_id ) );
-
-		Feedback::$form_ids[ $feedback_id ] = $form_id + 1;
-		$this->assertFalse( JetpackForms::is_target_submission( $feedback_id ) );
 	}
 
 	/**
@@ -382,7 +378,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 	}
 
 		/**
-		 * Configure one published saved form and a compatibility contact route.
+		 * Configure one published saved form.
 		 *
 		 * @return int
 		 */
@@ -394,21 +390,12 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
 			)
 		);
-		$page_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'page',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form {"ref":' . $form_id . ',"className":"' . Settings::TARGET_FORM_CLASS . '"} /-->',
-			)
-		);
-
 		update_option(
 			Settings::OPTION_NAME,
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id' => $page_id,
-					'target_form_id'  => $form_id,
+					'target_form_id' => $form_id,
 				)
 			)
 		);

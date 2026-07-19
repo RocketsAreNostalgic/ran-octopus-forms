@@ -5,8 +5,8 @@
  * @package RAN_EmailOctopus_Jetpack_Forms
  */
 
+use Automattic\Jetpack\Forms\ContactForm\Feedback;
 use RAN\EmailOctopusJetpackForms\JetpackForms;
-use RAN\EmailOctopusJetpackForms\Patterns;
 use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
@@ -22,7 +22,8 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 		parent::set_up();
 		delete_option( Settings::OPTION_NAME );
 		delete_option( 'emailoctopus_api_key' );
-		$_POST = array();
+		Feedback::$form_ids = array();
+		$_POST              = array();
 	}
 
 	/**
@@ -93,20 +94,20 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 	}
 
 	/**
-	 * Configure a valid marked submission and create its feedback post.
+	 * Configure a signed saved-form submission and create its feedback post.
 	 *
 	 * @param string $feedback_status Feedback post status.
 	 * @return int
 	 */
 	private function configure_target_submission( $feedback_status ) {
-		$contact_page_id = self::factory()->post->create(
+		$form_id     = self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
-				'post_content' => Patterns::get_contact_form_content(),
+				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
 			)
 		);
-		$feedback_id     = self::factory()->post->create(
+		$feedback_id = self::factory()->post->create(
 			array(
 				'post_status' => $feedback_status,
 			)
@@ -117,7 +118,7 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $contact_page_id,
+					'target_form_id'            => $form_id,
 					'emailoctopus_list_id'      => 'newsletter-list',
 					'emailoctopus_email_source' => 'email',
 					'newsletter_source'         => 'join_our_newsletter',
@@ -127,12 +128,35 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 		update_option( 'emailoctopus_api_key', 'test-api-key' );
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
 
-		$_POST = array(
-			'contact-form-id'          => (string) $contact_page_id,
-			'ran_octopus_forms_target' => wp_create_nonce( 'ran_octopus_forms_target_' . $contact_page_id ),
-		);
+		$_POST                              = $this->get_signed_context( $form_id );
+		Feedback::$form_ids[ $feedback_id ] = $form_id;
 
 		return $feedback_id;
+	}
+
+	/**
+	 * Render and extract the signed integration context for one saved form.
+	 *
+	 * @param int $form_id Saved form ID.
+	 * @return array<string,string>
+	 */
+	private function get_signed_context( $form_id ) {
+		$block = array(
+			'blockName' => 'jetpack/contact-form',
+			'attrs'     => array( 'ref' => $form_id ),
+		);
+
+		JetpackForms::before_render_block( null, $block );
+		$html = JetpackForms::mark_target_form_submission( '<form></form>' );
+		JetpackForms::after_render_block( '', $block );
+		preg_match_all( '/name="([^"]+)" value="([^"]*)"/', $html, $matches, PREG_SET_ORDER );
+		$context = array();
+
+		foreach ( $matches as $match ) {
+			$context[ $match[1] ] = html_entity_decode( $match[2], ENT_QUOTES );
+		}
+
+		return $context;
 	}
 
 	/**

@@ -28,7 +28,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 	 * @return void
 	 */
 	public function test_health_check_rejects_a_text_field_named_email() {
-		$this->configure_contact_page_and_email_source(
+		$this->configure_saved_form_and_email_source(
 			'<!-- wp:jetpack/field-text -->
 <div><!-- wp:jetpack/label {"label":"Email"} /--></div>
 <!-- /wp:jetpack/field-text -->',
@@ -47,7 +47,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 	 * @return void
 	 */
 	public function test_health_check_accepts_an_email_field_with_an_arbitrary_label() {
-		$this->configure_contact_page_and_email_source(
+		$this->configure_saved_form_and_email_source(
 			'<!-- wp:jetpack/field-email -->
 <div><!-- wp:jetpack/label {"label":"Preferred address"} /--></div>
 <!-- /wp:jetpack/field-email -->',
@@ -61,16 +61,16 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 	}
 
 	/**
-	 * Configure the selected email source against one contact form.
+	 * Configure the selected email source against one saved Jetpack form.
 	 *
 	 * @param string $field_block Serialized Jetpack field block.
 	 * @param string $source_key  Selected normalized source key.
 	 * @return void
 	 */
-	private function configure_contact_page_and_email_source( $field_block, $source_key ) {
-		$contact_page_id = self::factory()->post->create(
+	private function configure_saved_form_and_email_source( $field_block, $source_key ) {
+		$target_form_id = self::factory()->post->create(
 			array(
-				'post_type'    => 'page',
+				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
 				'post_content' => '<!-- wp:jetpack/contact-form -->
 <div>' . $field_block . '</div>
@@ -83,7 +83,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'contact_page_id'           => $contact_page_id,
+					'target_form_id'            => $target_form_id,
 					'emailoctopus_email_source' => $source_key,
 				)
 			)
@@ -97,7 +97,11 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 	 */
 	private function get_email_source_mapping_check() {
 		$method = new ReflectionMethod( HealthCheck::class, 'check_email_source_mapping' );
-		$method->setAccessible( true );
+
+		if ( PHP_VERSION_ID < 80500 ) {
+			$method->setAccessible( true );
+		}
+
 		$check = $method->invoke( null );
 
 		$this->assertIsArray( $check );
