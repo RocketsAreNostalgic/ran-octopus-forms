@@ -26,11 +26,10 @@ complete.
       copy. Keep it clear that this plugin adds newsletter subscriptions to
       selected saved Jetpack forms; it does not replace Jetpack form
       notifications or WordPress mail delivery.
-- [ ] Correct the EmailOctopus external-service disclosure. It must say both:
-      - an administrator can cause requests to the EmailOctopus API while
-        choosing, validating, or health-checking a configured destination; and
-      - a visitor's email address and deliberately mapped fields are sent only
-        when that visitor opts in through an eligible configured form.
+- [ ] Correct the EmailOctopus external-service disclosure: an administrator can
+      cause API requests while choosing, validating, or health-checking a
+      destination; a visitor's email address and deliberately mapped fields are
+      sent only when that visitor opts in through an eligible configured form.
 - [ ] Clarify the credentials step: the API key is configured through the
       official EmailOctopus WordPress plugin's `emailoctopus_api_key` setting;
       this plugin does not provide its own API-key field. A destination is then
@@ -67,12 +66,8 @@ the plugin ZIP.
 - [x] The plugin uses the `ran-emailoctopus-jetpack-forms` text domain and has
       a committed POT catalogue at
       `languages/ran-emailoctopus-jetpack-forms.pot`.
-- [ ] After all final public-copy and UI changes, run:
-
-      ```sh
-      pnpm make-pot
-      composer run phpcs -- --sniffs=WordPress.WP.I18n
-      ```
+- [ ] After all final public-copy and UI changes, run `pnpm make-pot` and
+      `composer run phpcs -- --sniffs=WordPress.WP.I18n`.
 
 - [ ] Review and commit any intentional POT update. Do not add `.po` or `.mo`
       files unless they are reviewed release-quality translations; after
