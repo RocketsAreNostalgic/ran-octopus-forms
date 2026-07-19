@@ -10,21 +10,21 @@ X-Release-Please-End: x-release-please-end
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 
-Adds an opt-in EmailOctopus integration to one saved Jetpack form across routes.
+Adds one shared EmailOctopus integration to compatible saved Jetpack forms.
 
 == Description ==
 
-RAN EmailOctopus for Jetpack Forms lets an administrator choose one published
-saved Jetpack form. The same form can be reused on pages, posts, patterns, and
-other singular routes while retaining one success redirect, opt-in
-EmailOctopus subscription, field mapping, and message set. Other saved forms,
-including adjacent forms on the same route, remain unchanged.
+RAN EmailOctopus for Jetpack Forms lets an administrator choose several
+compatible published saved Jetpack forms. Every selected form can be reused on
+pages, posts, patterns, and other singular routes while sharing one success
+redirect, opt-in EmailOctopus subscription, field mapping, and message set.
+Unselected forms, including adjacent forms on the same route, remain unchanged.
 
 Saved-form routing requires Jetpack to expose authoritative saved-form identity
-for submitted feedback and the selected target to be published and structurally
-valid. There is no page-scoped fallback. If that capability or target is
-unavailable, EmailOctopus routing stays disabled and the health check explains
-how to repair it. The success destination remains page-based.
+for submitted feedback and each active target to be published and structurally
+valid. There is no page-scoped fallback. One broken selection does not stop
+valid peers; the health check identifies forms with invalid structure or shared
+field mappings. The success destination remains page-based.
 
 Jetpack is required. EmailOctopus is optional and remains disabled until the
 administrator configures it.
@@ -33,9 +33,9 @@ administrator configures it.
 
 1. Install and activate Jetpack.
 2. Upload and activate RAN EmailOctopus for Jetpack Forms.
-3. Create or choose one published saved Jetpack form. The Contact Newsletter
+3. Create or choose compatible published saved Jetpack forms. The Contact Newsletter
    Form pattern in the RAN Forms category is a suitable starting point.
-4. Go to Settings > RAN EmailOctopus, select that saved form, and choose the
+4. Go to Settings > RAN EmailOctopus, select those saved forms, and choose the
    success page.
 5. Configure recipients in Jetpack's native Form notifications settings. This
    plugin does not replace Jetpack's notification email or WordPress mail path.
@@ -48,26 +48,27 @@ administrator configures it.
 
 = Does it change every Jetpack form? =
 
-No. It acts only on the selected saved form, wherever that form is reused.
+No. It acts only on explicitly selected saved forms, wherever they are reused.
 
 = Can one configuration be used on several pages? =
 
-Yes. Reuse the same selected saved Jetpack form on each route. A different
-saved form is a separate definition and is not included automatically.
+Yes. Reuse any selected saved form on each route. Several compatible saved
+forms can share the same configuration when each one is explicitly selected.
 
 = Why does the health check say EmailOctopus routing is disabled? =
 
 Routing needs authoritative saved-form identity from Jetpack and a valid,
 published saved-form target. The health check reports whether the installed
-Jetpack version lacks that capability or the selected form is missing, draft,
-the wrong post type, or structurally invalid. Select or repair the saved form;
-the plugin does not fall back to a page-scoped integration.
+Jetpack version lacks that capability or a selected form is missing, draft,
+the wrong post type, structurally invalid, or incompatible with the shared
+field mapping. Repair or remove that form; valid selected peers continue
+operating and the plugin never falls back to a page-scoped integration.
 
 = Does the plugin send contact notification emails? =
 
 No. Jetpack's native Form notifications remain responsible for recipients and
 messages. Those notifications continue through WordPress's normal mail path.
-Avoid enabling another EmailOctopus connector for the same saved form because
+Avoid enabling another EmailOctopus connector for the same saved forms because
 both connectors could process one opt-in.
 
 = What happens when EmailOctopus is not configured? =
@@ -103,7 +104,7 @@ First public release for WordPress 6.8+ and PHP 8.0+.
 
 = 1.0.0 =
 
-Existing EmailOctopus settings remain, but the upgrade does not infer a saved
-form from page content. An existing saved-form target remains configured when
-present; otherwise an administrator must select a published saved form before
-EmailOctopus routing is enabled.
+Existing EmailOctopus settings remain, but the upgrade does not infer saved
+forms from page content. An existing saved-form target becomes the first member
+of the selected collection; otherwise an administrator must select at least one
+published saved form before EmailOctopus routing is enabled.

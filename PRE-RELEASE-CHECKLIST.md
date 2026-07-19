@@ -40,9 +40,10 @@ pnpm release
 - [ ] Run Plugin Check against the unpacked release ZIP, matching the
       `.github/workflows/quality.yml` release job.
 - [ ] Install the generated ZIP into a fresh WordPress site with Jetpack active
-      and verify activation, settings save, pattern insertion, single-form
-      marker behaviour, success redirect, normal Jetpack submission behaviour,
-      and upgrade handling for zero/one/multiple form cases.
+      and verify activation, settings save, pattern insertion, multiple selected
+      forms beside an unselected form, per-form signed context, success redirect,
+      normal Jetpack submission behaviour, and scalar-to-collection upgrade
+      handling for zero/one/multiple form cases.
 - [ ] Verify EmailOctopus opt-in mapping with real or sandbox provider
       credentials before making the public service claims final.
 - [ ] Confirm the release ZIP is built only from `release-contents.txt` and does

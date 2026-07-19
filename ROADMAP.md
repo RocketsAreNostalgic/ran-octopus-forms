@@ -1,22 +1,25 @@
 # Roadmap
 
-This roadmap records the possible paths for expanding RAN EmailOctopus for
-Jetpack Forms beyond its current single-saved-form configuration. It
-is a planning document rather than a commitment to deliver every option.
+This roadmap records the path from route-portable saved-form targeting to
+multiple independent EmailOctopus integrations. It is a planning document
+rather than a commitment to deliver every option.
 
 ## Current baseline
 
-The implemented Option 1 baseline stores one integration configuration
+The implemented Option 2 baseline stores one integration configuration
 containing:
 
-- one published saved Jetpack form and one success page;
+- an explicitly selected collection of saved Jetpack forms and one success
+  page;
 - one EmailOctopus form or list destination;
 - one email source, newsletter consent source, and custom-field map; and
 - one set of visitor-facing subscription outcome messages.
 
-The saved form is the integration identity wherever it is embedded. Runtime
-routing signs that identity and verifies it against Jetpack's authoritative
-feedback metadata. There is no contact-page selector or page-scoped fallback.
+Each selected saved form is an integration identity wherever it is embedded.
+Runtime routing signs that exact identity and verifies it against Jetpack's
+authoritative feedback metadata. Invalid or mapping-incompatible selections
+are isolated without disabling valid peers. There is no contact-page selector
+or page-scoped fallback.
 
 Routes should not become permanent form identifiers. Permalinks can change,
 and a saved Jetpack form can be embedded in more than one place. Future work
@@ -74,16 +77,16 @@ EmailOctopus destination and field map.
 - The existing destination, mappings, success page, and messages remain
   global.
 
-### Likely work
+### Implemented work
 
-- Replace the scalar target with an explicitly selected saved-form collection.
-- Resolve each submitted target from the existing signed saved-form context.
-- Build shared mapping candidates from the compatible intersection of selected
+- Replaced the scalar target with an explicitly selected saved-form collection.
+- Resolved each submitted target from the existing signed saved-form context.
+- Built shared mapping candidates from the compatible intersection of selected
   saved-form definitions.
-- Validate the shared email, consent, and custom-field mappings against every
+- Validated the shared email, consent, and custom-field mappings against every
   participating form.
-- Report health-check results per participating form.
-- Cover multiple routes, multiple forms on one page, sibling unselected forms,
+- Reported health-check results per participating form.
+- Covered multiple routes, multiple forms on one page, sibling unselected forms,
   stale mappings, and invalid markers in integration tests.
 
 ### Complexity
@@ -138,10 +141,9 @@ support costs.
 
 ## Recommended sequence
 
-1. Use the implemented Option 1 saved form across routes without duplicating
-   its EmailOctopus configuration.
-2. Consider Option 2 only when a real need arises for several compatible form
-   definitions.
+1. Use the implemented Option 2 collection for compatible saved forms that can
+   share one EmailOctopus configuration.
+2. Isolate or remove forms that cannot satisfy the shared mappings.
 3. Adopt Option 3 only when at least two forms demonstrably need different
    destinations, mappings, redirects, or messages.
 
@@ -155,7 +157,7 @@ Any future implementation should:
 - preserve the existing saved-form configuration or provide an explicit
   migration;
 - retain the current and deprecated shortcodes, filters, and constants;
-- keep unmarked Jetpack forms isolated;
+- keep unselected Jetpack forms isolated;
 - reject tampered or stale submission markers;
 - continue skipping Jetpack feedback already classified as spam or trash; and
 - avoid requiring URL scans or hard-coded page slugs.

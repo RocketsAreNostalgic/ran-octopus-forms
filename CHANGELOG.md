@@ -38,8 +38,10 @@
 ## 1.0.0
 
 - First public release for WordPress 6.8+ and PHP 8.0+.
-- Added saved-form targeting so integrations apply only to the selected
-  reusable Jetpack form across routes.
+- Added saved-form targeting so one shared integration can apply to explicitly
+  selected compatible reusable Jetpack forms across routes.
+- Added per-form compatibility isolation so one invalid or incompatible
+  selection cannot stop eligible peers.
 - Added WordPress.org metadata, translations, release validation and quality
   tooling.
 - Kept routing independent of page paths and embedding routes.
