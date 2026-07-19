@@ -339,6 +339,7 @@ final class Admin {
 		?>
 		<div class="ran-profile-panel">
 			<h2><?php echo esc_html( $is_new ? __( 'Create integration profile', 'ran-emailoctopus-jetpack-forms' ) : __( 'Step 1 — Identity and assignment', 'ran-emailoctopus-jetpack-forms' ) ); ?></h2>
+			<p><a href="<?php echo esc_url( self::page_url() ); ?>"><?php esc_html_e( 'Back to integrations', 'ran-emailoctopus-jetpack-forms' ); ?></a></p>
 			<p><?php esc_html_e( 'Save this stage to refresh the field choices in Step 2. It never clears behaviour saved below.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( $is_new ? 'ran_emailoctopus_jetpack_forms_create_profile' : 'ran_emailoctopus_jetpack_forms_save_profile_identity' ); ?>" />

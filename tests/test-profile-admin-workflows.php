@@ -220,6 +220,29 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Admin_Workflows_Test extends WP_Uni
 		$this->assertStringNotContainsString( 'action="options.php"', $markup );
 	}
 
+	/** Create and edit views provide a route back to the integrations index. */
+	public function test_identity_editor_links_back_to_integrations_index() {
+		$profile_id = $this->create_profile( 'Existing profile', array() );
+		$expected   = esc_url( add_query_arg( array( 'page' => Admin::PAGE_SLUG ), admin_url( 'options-general.php' ) ) );
+		$views      = array(
+			array( 'view' => 'create' ),
+			array(
+				'view'       => 'edit',
+				'profile_id' => $profile_id,
+			),
+		);
+
+		foreach ( $views as $view ) {
+			$_GET = array_merge( array( 'page' => Admin::PAGE_SLUG ), $view );
+			ob_start();
+			Admin::render_page();
+			$markup = ob_get_clean();
+
+			$this->assertStringContainsString( '<a href="' . $expected . '">Back to integrations</a>', $markup );
+			$this->assertSame( 1, substr_count( $markup, '>Back to integrations</a>' ) );
+		}
+	}
+
 	/** The delete confirmation renders from the current profile configuration. */
 	public function test_delete_confirmation_renders_profile_summary() {
 		$form_id = $this->create_saved_form();
