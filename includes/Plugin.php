@@ -16,12 +16,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class Plugin {
 	/**
-	 * Migrate settings when the renamed plugin is activated.
+	 * Initialize a canonical empty profile store on first activation.
 	 *
 	 * @return void
 	 */
 	public static function activate() {
-		Settings::upgrade();
+		Settings::initialize_store();
 	}
 
 	/**
@@ -30,8 +30,6 @@ final class Plugin {
 	 * @return void
 	 */
 	public static function register() {
-		self::activate();
-
 		Patterns::register();
 		JetpackForms::register();
 		Admin::register();

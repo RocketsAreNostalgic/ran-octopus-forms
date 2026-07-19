@@ -29,6 +29,7 @@ define( 'RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION', '1.1.0' );
 define( 'RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_FILE', __FILE__ );
 define( 'RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
+require_once RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_DIR . 'includes/OptionMutex.php';
 require_once RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_DIR . 'includes/Settings.php';
 require_once RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_DIR . 'includes/IntegrationProfile.php';
 require_once RAN_EMAILOCTOPUS_JETPACK_FORMS_PLUGIN_DIR . 'includes/IntegrationResolver.php';

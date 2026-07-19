@@ -1,6 +1,6 @@
 <?php
 /**
- * Internal EmailOctopus integration profile resolver.
+ * Integration profile resolution and routing gates.
  *
  * @package RAN_EmailOctopus_Jetpack_Forms
  */
@@ -12,55 +12,85 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Resolves the route-independent default profile and availability gate.
+ * Resolves immutable profile and saved-form ownership explicitly.
  */
 final class IntegrationResolver {
 	/**
-	 * One internal profile identifier.
-	 */
-	const DEFAULT_PROFILE_ID = 'default';
-
-	/**
-	 * Jetpack class that exposes authoritative feedback form identity.
+	 * Jetpack class exposing authoritative feedback form identity.
 	 */
 	const FEEDBACK_CLASS = '\\Automattic\\Jetpack\\Forms\\ContactForm\\Feedback';
 
 	/**
-	 * Resolve the default integration profile.
+	 * Resolve one profile by immutable UUID.
 	 *
-	 * @return IntegrationProfile
-	 */
-	public static function get_default_profile() {
-		return new IntegrationProfile(
-			self::DEFAULT_PROFILE_ID,
-			Settings::get_target_form_ids(),
-			array(
-				'success_url'                     => Settings::get_success_url(),
-				'emailoctopus_form_id'            => Settings::get_emailoctopus_form_id(),
-				'emailoctopus_list_id'            => Settings::get_emailoctopus_list_id(),
-				'emailoctopus_email_source'       => Settings::get_emailoctopus_email_source(),
-				'emailoctopus_field_map'          => Settings::get_emailoctopus_field_map(),
-				'newsletter_source'               => Settings::get_newsletter_source(),
-				'emailoctopus_pending_message'    => Settings::get_emailoctopus_outcome_message( 'pending' ),
-				'emailoctopus_subscribed_message' => Settings::get_emailoctopus_outcome_message( 'subscribed' ),
-				'emailoctopus_existing_message'   => Settings::get_emailoctopus_outcome_message( 'existing' ),
-				'emailoctopus_failure_message'    => Settings::get_emailoctopus_outcome_message( 'failed' ),
-			)
-		);
-	}
-
-	/**
-	 * Resolve a known profile ID.
-	 *
-	 * @param string $profile_id Profile ID.
+	 * @param string $profile_id Immutable profile UUID.
 	 * @return IntegrationProfile|null
 	 */
 	public static function get_profile( $profile_id ) {
-		if ( self::DEFAULT_PROFILE_ID !== sanitize_key( $profile_id ) ) {
+		$profile_id = strtolower( (string) $profile_id );
+		$stored     = Settings::get_profile( $profile_id );
+
+		if ( null === $stored ) {
 			return null;
 		}
 
-		return self::get_default_profile();
+		return new IntegrationProfile( $profile_id, $stored, self::get_effective_configuration( $profile_id, $stored ) );
+	}
+
+	/**
+	 * Get all structurally valid profiles.
+	 *
+	 * @return array<string,IntegrationProfile>
+	 */
+	public static function get_profiles() {
+		$resolved = array();
+
+		foreach ( Settings::get_profiles() as $profile_id => $stored ) {
+			$profile = self::get_profile( $profile_id );
+
+			if ( null !== $profile ) {
+				$resolved[ $profile_id ] = $profile;
+			}
+		}
+
+		return $resolved;
+	}
+
+	/**
+	 * Resolve the sole owner of one form.
+	 *
+	 * Duplicate corrupt ownership fails closed for this form only.
+	 *
+	 * @param int $form_id Saved Jetpack form ID.
+	 * @return IntegrationProfile|null
+	 */
+	public static function get_profile_for_form_id( $form_id ) {
+		$owners = self::get_profile_ids_for_form_id( $form_id );
+
+		return 1 === count( $owners ) ? self::get_profile( $owners[0] ) : null;
+	}
+
+	/**
+	 * Get every stored owner for diagnostics and conflict detection.
+	 *
+	 * @param int $form_id Saved Jetpack form ID.
+	 * @return array<int,string>
+	 */
+	public static function get_profile_ids_for_form_id( $form_id ) {
+		$form_id = absint( $form_id );
+		$owners  = array();
+
+		if ( 0 === $form_id ) {
+			return $owners;
+		}
+
+		foreach ( Settings::get_profiles() as $profile_id => $profile ) {
+			if ( in_array( $form_id, Settings::normalize_form_ids( $profile['form_ids'] ?? array() ), true ) ) {
+				$owners[] = $profile_id;
+			}
+		}
+
+		return $owners;
 	}
 
 	/**
@@ -73,7 +103,7 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Alias describing the portable capability gate.
+	 * Alias for the authoritative identity capability.
 	 *
 	 * @return bool
 	 */
@@ -82,7 +112,7 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Whether the default profile can safely run in portable mode.
+	 * Whether at least one profile form is currently routable.
 	 *
 	 * @return bool
 	 */
@@ -91,7 +121,7 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Alias for callers that describe the active routing mode.
+	 * Alias describing active profile routing.
 	 *
 	 * @return bool
 	 */
@@ -100,47 +130,79 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Get a machine-readable reason portable mode is unavailable.
+	 * Explain why no configured profile form is routable.
 	 *
-	 * @return string Empty when portable mode is available.
+	 * @return string Empty when at least one form is routable.
 	 */
 	public static function get_portability_reason() {
 		if ( ! self::supports_portable_forms() ) {
 			return 'feedback_identity_unavailable';
 		}
 
-		$form_ids = Settings::get_target_form_ids();
+		$profiles = self::get_profiles();
 
-		if ( empty( $form_ids ) ) {
-			return 'target_not_selected';
+		if ( empty( $profiles ) ) {
+			return 'profile_not_configured';
 		}
 
-		foreach ( $form_ids as $form_id ) {
-			if ( '' === self::get_target_form_reason( $form_id ) ) {
-				return '';
+		$first_reason = 'target_not_selected';
+
+		foreach ( $profiles as $profile ) {
+			if ( empty( $profile->get_form_ids() ) ) {
+				continue;
+			}
+
+			foreach ( $profile->get_form_ids() as $form_id ) {
+				$reason = self::get_target_form_reason( $form_id, $profile->get_id() );
+
+				if ( '' === $reason ) {
+					return '';
+				}
+
+				$first_reason = $reason;
 			}
 		}
 
-		return self::get_target_form_reason( $form_ids[0] );
+		return $first_reason;
 	}
 
 	/**
-	 * Get the routing availability reason for one selected saved form.
+	 * Get one form's profile-aware routing reason.
 	 *
-	 * @param int                 $form_id           Saved Jetpack form ID.
-	 * @param array<int,int>|null $selected_form_ids Optional collection being validated before save.
-	 * @return string Empty when this form is routing eligible.
+	 * @param int    $form_id    Saved Jetpack form ID.
+	 * @param string $profile_id Optional expected owner UUID.
+	 * @return string Empty when routing is eligible.
 	 */
-	public static function get_target_form_reason( $form_id, $selected_form_ids = null ) {
-		$form_id           = absint( $form_id );
-		$selected_form_ids = null === $selected_form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $selected_form_ids );
+	public static function get_target_form_reason( $form_id, $profile_id = '' ) {
+		$form_id = absint( $form_id );
+		$owners  = self::get_profile_ids_for_form_id( $form_id );
 
-		if ( ! in_array( $form_id, $selected_form_ids, true ) ) {
+		if ( 1 < count( $owners ) ) {
+			return 'target_ownership_conflict';
+		}
+
+		if ( empty( $owners ) ) {
 			return 'target_not_selected';
+		}
+
+		$owner_id = $owners[0];
+
+		if ( '' !== $profile_id && strtolower( (string) $profile_id ) !== $owner_id ) {
+			return 'target_profile_mismatch';
+		}
+
+		$profile = self::get_profile( $owner_id );
+
+		if ( null === $profile ) {
+			return 'profile_not_configured';
 		}
 
 		if ( ! self::supports_portable_forms() ) {
 			return 'feedback_identity_unavailable';
+		}
+
+		if ( '' === (string) ( $profile->get_configuration()['success_url'] ?? '' ) ) {
+			return 'success_destination_unavailable';
 		}
 
 		$form = get_post( $form_id );
@@ -165,31 +227,86 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Get all selected saved-form IDs, valid or otherwise.
+	 * Whether one profile-owned form can receive signed routing.
+	 *
+	 * @param int    $form_id    Saved form ID.
+	 * @param string $profile_id Optional expected profile UUID.
+	 * @return bool
+	 */
+	public static function is_routing_eligible_form_id( $form_id, $profile_id = '' ) {
+		return '' === self::get_target_form_reason( $form_id, $profile_id );
+	}
+
+	/**
+	 * Whether one routed form has all profile mapping sources.
+	 *
+	 * @param int    $form_id    Saved form ID.
+	 * @param string $profile_id Optional expected profile UUID.
+	 * @return bool
+	 */
+	public static function is_subscription_eligible_form_id( $form_id, $profile_id = '' ) {
+		$profile = '' === $profile_id ? self::get_profile_for_form_id( $form_id ) : self::get_profile( $profile_id );
+
+		if ( null === $profile || ! self::is_routing_eligible_form_id( $form_id, $profile->get_id() ) ) {
+			return false;
+		}
+
+		$compatibility = EmailOctopusFieldMapper::get_subscription_compatibility( array( absint( $form_id ) ), $profile->get_configuration() );
+
+		return ! empty( $compatibility[ absint( $form_id ) ]['eligible'] );
+	}
+
+	/**
+	 * Get all selected IDs across profiles for diagnostics only.
 	 *
 	 * @return array<int,int>
 	 */
 	public static function get_target_form_ids() {
-		return Settings::get_target_form_ids();
+		$form_ids = array();
+
+		foreach ( self::get_profiles() as $profile ) {
+			$form_ids = array_merge( $form_ids, $profile->get_form_ids() );
+		}
+
+		return Settings::normalize_form_ids( $form_ids );
 	}
 
 	/**
-	 * Whether one selected saved form can receive signed integration routing.
+	 * Build the six-filter runtime configuration for one immutable profile.
 	 *
-	 * @param int $form_id Saved Jetpack form ID.
-	 * @return bool
+	 * @param string              $profile_id Immutable profile UUID.
+	 * @param array<string,mixed> $stored     Canonical profile.
+	 * @return array<string,mixed>
 	 */
-	public static function is_routing_eligible_form_id( $form_id ) {
-		return '' === self::get_target_form_reason( $form_id );
-	}
+	private static function get_effective_configuration( $profile_id, $stored ) {
+		$destination = is_array( $stored['destination'] ?? null ) ? $stored['destination'] : array();
+		$type        = (string) ( $destination['type'] ?? '' );
+		$id          = (string) ( $destination['id'] ?? '' );
+		$form_id     = 'form' === $type ? $id : '';
+		$list_id     = 'list' === $type ? $id : '';
+		$page_id     = absint( $stored['success_page_id'] ?? 0 );
+		$success_url = 0 < $page_id ? get_permalink( $page_id ) : false;
+		$messages    = is_array( $stored['messages'] ?? null ) ? $stored['messages'] : array();
 
-	/**
-	 * Whether one routed form has every source required for subscription.
-	 *
-	 * @param int $form_id Saved Jetpack form ID.
-	 * @return bool
-	 */
-	public static function is_subscription_eligible_form_id( $form_id ) {
-		return self::is_routing_eligible_form_id( $form_id ) && EmailOctopusFieldMapper::is_subscription_compatible_form_id( $form_id );
+		$form_id = (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_form_id', $form_id, $profile_id );
+		$list_id = (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_list_id', $list_id, $profile_id );
+
+		return array(
+			'destination'                     => array(
+				'type' => $type,
+				'id'   => $id,
+			),
+			'success_page_id'                 => $page_id,
+			'success_url'                     => (string) apply_filters( 'ran_emailoctopus_jetpack_forms_contact_success_url', $success_url ? $success_url : '', $profile_id ),
+			'emailoctopus_form_id'            => $form_id,
+			'emailoctopus_list_id'            => $list_id,
+			'emailoctopus_email_source'       => (string) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_email_source', (string) ( $stored['email_source'] ?? '' ), $profile_id ),
+			'emailoctopus_field_map'          => (array) apply_filters( 'ran_emailoctopus_jetpack_forms_emailoctopus_field_map', (array) ( $stored['field_map'] ?? array() ), $profile_id ),
+			'newsletter_source'               => (string) apply_filters( 'ran_emailoctopus_jetpack_forms_newsletter_source', (string) ( $stored['consent_source'] ?? '' ), $profile_id ),
+			'emailoctopus_pending_message'    => sanitize_textarea_field( (string) ( $messages['pending'] ?? '' ) ),
+			'emailoctopus_subscribed_message' => sanitize_textarea_field( (string) ( $messages['subscribed'] ?? '' ) ),
+			'emailoctopus_existing_message'   => sanitize_textarea_field( (string) ( $messages['existing'] ?? '' ) ),
+			'emailoctopus_failure_message'    => sanitize_textarea_field( (string) ( $messages['failed'] ?? '' ) ),
+		);
 	}
 }

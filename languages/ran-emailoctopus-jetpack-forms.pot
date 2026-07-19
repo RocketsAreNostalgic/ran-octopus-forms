@@ -866,6 +866,22 @@ msgstr ""
 msgid "%1$d of %2$d EmailOctopus custom field(s) are mapped. Only mapped fields and email_address are submitted; unmapped fields include: %3$s."
 msgstr ""
 
+#: includes/OptionMutex.php:80
+msgid "The settings write lock could not generate a valid ownership token."
+msgstr ""
+
+#: includes/OptionMutex.php:112
+msgid "The settings write lock is malformed and was not changed."
+msgstr ""
+
+#: includes/OptionMutex.php:116
+msgid "Another settings change is currently being saved. Please retry in a moment."
+msgstr ""
+
+#: includes/OptionMutex.php:138
+msgid "Another settings change won the write lock. Please retry."
+msgstr ""
+
 #: includes/Patterns.php:51
 msgid "RAN Forms"
 msgstr ""
@@ -902,40 +918,60 @@ msgstr ""
 msgid "Contact us"
 msgstr ""
 
-#: includes/Settings.php:56
+#: includes/Settings.php:508
+msgid "The profile settings change produced an invalid store and was not saved."
+msgstr ""
+
+#: includes/Settings.php:513
+msgid "The settings write lock expired before the change could be saved. Please retry."
+msgstr ""
+
+#: includes/Settings.php:516
+msgid "The integration profile could not be saved. No changes were applied."
+msgstr ""
+
+#: includes/Settings.php:559
+msgid "A unique profile identifier could not be generated."
+msgstr ""
+
+#: includes/Settings.php:577
+msgid "The submitted profile revision is invalid."
+msgstr ""
+
+#: includes/Settings.php:591
+msgid "Enter a profile name before saving."
+msgstr ""
+
+#. translators: 1: saved Jetpack form ID, 2: profile label.
+#: includes/Settings.php:718
+#, php-format
+msgid "Saved form #%1$d is already assigned to “%2$s”. Remove it there before assigning it to this profile."
+msgstr ""
+
+#: includes/Settings.php:829
 msgid "There’s one more step: please confirm your subscription using the email we’ve just sent you."
 msgstr ""
 
-#: includes/Settings.php:57
+#: includes/Settings.php:830
 msgid "You’re now subscribed to our newsletter."
 msgstr ""
 
-#: includes/Settings.php:58
+#: includes/Settings.php:831
 msgid "This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier."
 msgstr ""
 
-#: includes/Settings.php:59
+#: includes/Settings.php:832
 msgid "Your message has been sent, but we could not add you to the newsletter. Please try again later."
 msgstr ""
 
-#. translators: %s: comma-separated saved Jetpack form IDs.
-#: includes/Settings.php:301
-#, php-format
-msgid "EmailOctopus email source needs attention on saved form(s) %s: select a current email field before subscriptions can run for those forms."
+#: includes/Settings.php:842
+msgid "The stored integration settings do not use the current profile schema. Create a profile to replace them."
 msgstr ""
 
-#. translators: %s: comma-separated saved Jetpack form IDs.
-#: includes/Settings.php:314
-#, php-format
-msgid "Newsletter opt-in source needs attention on saved form(s) %s: select a current checkbox or consent field before subscriptions can run for those forms."
+#: includes/Settings.php:851
+msgid "That integration profile no longer exists."
 msgstr ""
 
-#: includes/Settings.php:336
-msgid "Select a published saved Jetpack form before EmailOctopus subscriptions can run."
-msgstr ""
-
-#. translators: %d: saved Jetpack form ID.
-#: includes/Settings.php:354
-#, php-format
-msgid "Selected target #%d must be a published, structurally valid saved Jetpack form. It remains selected for diagnostics but is isolated from integration handling."
+#: includes/Settings.php:860
+msgid "This profile changed after the editor was opened. Reload it and apply your changes again."
 msgstr ""
