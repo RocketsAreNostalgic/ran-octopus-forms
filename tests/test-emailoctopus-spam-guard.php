@@ -100,14 +100,25 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 	 * @return int
 	 */
 	private function configure_target_submission( $feedback_status ) {
-		$form_id     = self::factory()->post->create(
+		$form_content  = '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form">'
+			. '<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Email"} /--></div><!-- /wp:jetpack/field-email -->'
+			. '<!-- wp:jetpack/field-checkbox --><div><!-- wp:jetpack/label {"label":"Join our newsletter"} /--></div><!-- /wp:jetpack/field-checkbox -->'
+			. '</div><!-- /wp:jetpack/contact-form -->';
+		$first_form_id = self::factory()->post->create(
 			array(
 				'post_type'    => 'jetpack_form',
 				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
+				'post_content' => $form_content,
 			)
 		);
-		$feedback_id = self::factory()->post->create(
+		$form_id       = self::factory()->post->create(
+			array(
+				'post_type'    => 'jetpack_form',
+				'post_status'  => 'publish',
+				'post_content' => $form_content,
+			)
+		);
+		$feedback_id   = self::factory()->post->create(
 			array(
 				'post_status' => $feedback_status,
 			)
@@ -118,7 +129,7 @@ class RAN_EmailOctopus_Jetpack_Forms_EmailOctopus_Spam_Guard_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'            => $form_id,
+					'target_form_ids'           => array( $first_form_id, $form_id ),
 					'emailoctopus_list_id'      => 'newsletter-list',
 					'emailoctopus_email_source' => 'email',
 					'newsletter_source'         => 'join_our_newsletter',

@@ -108,7 +108,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Submission_Messages_Test extends WP_UnitTes
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'  => $form_id,
+					'target_form_ids' => array( $form_id ),
 					'success_page_id' => $success_page_id,
 				)
 			)

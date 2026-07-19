@@ -75,4 +75,40 @@ class RAN_EmailOctopus_Jetpack_Forms_Email_Source_Mapping_Test extends WP_UnitTe
 			)
 		);
 	}
+
+	/**
+	 * An existing optional custom source may submit a blank value without payload.
+	 *
+	 * @return void
+	 */
+	public function test_blank_optional_custom_value_is_omitted_from_payload() {
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge(
+				Settings::get_defaults(),
+				array(
+					'emailoctopus_field_map' => array(
+						'FirstName' => array(
+							'source'    => 'first_name',
+							'transform' => 'as_is',
+						),
+						'Country'   => array(
+							'source'    => 'country',
+							'transform' => 'as_is',
+						),
+					),
+				)
+			)
+		);
+
+		$this->assertSame(
+			array( 'Country' => 'Scotland' ),
+			EmailOctopusFieldMapper::build_fields_payload(
+				array(
+					'3_First name' => '',
+					'4_Country'    => 'Scotland',
+				)
+			)
+		);
+	}
 }

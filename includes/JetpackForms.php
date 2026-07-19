@@ -70,7 +70,7 @@ final class JetpackForms {
 
 		$form_ref = self::get_block_form_ref( $parsed_block );
 
-		if ( 0 < $form_ref && IntegrationResolver::is_target_form_id( $form_ref ) ) {
+		if ( 0 < $form_ref && IntegrationResolver::is_routing_eligible_form_id( $form_ref ) ) {
 			$profile = IntegrationResolver::get_default_profile();
 
 			if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
@@ -138,7 +138,13 @@ final class JetpackForms {
 
 		$profile_id = self::$portable_render_context['profile_id'];
 		$form_ref   = self::$portable_render_context['form_ref'];
-		$marker     = sprintf(
+
+		// Jetpack renders synced forms by short-circuiting pre_render_block, so
+		// WordPress never runs render_block for the outer reference. Consume the
+		// context at the HTML boundary to prevent an adjacent form inheriting it.
+		self::$portable_render_context = null;
+
+		$marker = sprintf(
 			'<input type="hidden" name="%1$s" value="%2$s" /><input type="hidden" name="%3$s" value="%4$d" /><input type="hidden" name="%5$s" value="%6$s" />',
 			esc_attr( self::PROFILE_FIELD ),
 			esc_attr( $profile_id ),
@@ -237,6 +243,10 @@ final class JetpackForms {
 			return;
 		}
 
+		if ( ! IntegrationResolver::is_subscription_eligible_form_id( $context['form_ref'] ) ) {
+			return;
+		}
+
 		if ( ! self::has_newsletter_opt_in( $all_values ) ) {
 			return;
 		}
@@ -285,7 +295,7 @@ final class JetpackForms {
 		$form_ref   = absint( wp_unslash( $_POST[ self::FORM_REF_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
 		$profile    = IntegrationResolver::get_profile( $profile_id );
 
-		if ( null === $profile || ! in_array( $form_ref, $profile->get_target_form_ids(), true ) || ! IntegrationResolver::is_target_form_id( $form_ref ) ) {
+		if ( null === $profile || ! in_array( $form_ref, $profile->get_form_ids(), true ) || ! IntegrationResolver::is_routing_eligible_form_id( $form_ref ) ) {
 			return null;
 		}
 

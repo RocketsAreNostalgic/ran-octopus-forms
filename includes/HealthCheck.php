@@ -81,43 +81,69 @@ final class HealthCheck {
 	 * @return array<int,array<string,string>>
 	 */
 	private static function check_integration_target() {
-		$reason  = IntegrationResolver::get_portability_reason();
-		$form_id = IntegrationResolver::get_target_form_id();
+		$form_ids = IntegrationResolver::get_target_form_ids();
 
-		if ( IntegrationResolver::is_portable_available() ) {
-			$form  = get_post( $form_id );
-			$title = $form instanceof \WP_Post && '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
-
-			return array(
-				self::row( 'pass', __( 'Saved-form routing', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form routing is active. One integration profile follows the selected form across routes.', 'ran-emailoctopus-jetpack-forms' ) ),
-				self::row(
-					'pass',
-					__( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ),
-					sprintf(
-						/* translators: 1: saved Jetpack form title, 2: post ID. */
-						__( 'Published saved form "%1$s" (#%2$d) is the EmailOctopus integration target.', 'ran-emailoctopus-jetpack-forms' ),
-						$title,
-						$form_id
-					)
-				),
-			);
-		}
-
-		if ( 'feedback_identity_unavailable' === $reason ) {
+		if ( ! IntegrationResolver::supports_portable_forms() ) {
 			return array(
 				self::row( 'error', __( 'Saved-form routing', 'ran-emailoctopus-jetpack-forms' ), __( 'EmailOctopus routing is disabled because this Jetpack version cannot authoritatively identify a saved form after submission. Update Jetpack to a version that supports saved-form identity.', 'ran-emailoctopus-jetpack-forms' ) ),
 			);
 		}
 
-		if ( 'target_not_selected' === $reason ) {
+		if ( empty( $form_ids ) ) {
 			return array(
-				self::row( 'error', __( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ), __( 'No saved form is selected. Select a published saved Jetpack form; EmailOctopus routing remains disabled until the target is valid.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::row( 'error', __( 'Selected saved forms', 'ran-emailoctopus-jetpack-forms' ), __( 'No saved forms are selected. Select at least one published saved Jetpack form; EmailOctopus routing remains disabled until a target is valid.', 'ran-emailoctopus-jetpack-forms' ) ),
 			);
 		}
 
-		return array(
-			self::row( 'error', __( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ), self::get_invalid_target_message( $reason, $form_id ) ),
+		$routable_ids = self::get_routable_form_ids( $form_ids );
+		$has_peer     = ! empty( $routable_ids );
+		$checks       = array(
+			self::row(
+				'pass',
+				__( 'Selected saved forms', 'ran-emailoctopus-jetpack-forms' ),
+				sprintf(
+					/* translators: %d: number of selected saved Jetpack forms. */
+					_n( '%d saved form is selected.', '%d saved forms are selected.', count( $form_ids ), 'ran-emailoctopus-jetpack-forms' ),
+					count( $form_ids )
+				)
+			),
 		);
+
+		$checks[] = self::row(
+			count( $routable_ids ) === count( $form_ids ) ? 'pass' : ( $has_peer ? 'warning' : 'error' ),
+			__( 'Saved-form routing', 'ran-emailoctopus-jetpack-forms' ),
+			sprintf(
+				/* translators: 1: number of routable forms, 2: number of selected forms. */
+				__( '%1$d of %2$d selected saved form(s) can be routed. Invalid forms are isolated and do not stop valid peers.', 'ran-emailoctopus-jetpack-forms' ),
+				count( $routable_ids ),
+				count( $form_ids )
+			)
+		);
+
+		foreach ( $form_ids as $form_id ) {
+			$reason = IntegrationResolver::get_target_form_reason( $form_id );
+
+			if ( '' === $reason ) {
+				$form    = get_post( $form_id );
+				$title   = $form instanceof \WP_Post && '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
+				$message = sprintf(
+					/* translators: 1: saved Jetpack form title, 2: post ID. */
+					__( 'Published saved form "%1$s" (#%2$d) is eligible for route-independent handling.', 'ran-emailoctopus-jetpack-forms' ),
+					$title,
+					$form_id
+				);
+				$checks[] = self::row( 'pass', sprintf( /* translators: %d: saved Jetpack form ID. */ __( 'Saved Jetpack form #%d', 'ran-emailoctopus-jetpack-forms' ), $form_id ), $message );
+				continue;
+			}
+
+			$checks[] = self::row(
+				$has_peer ? 'warning' : 'error',
+				sprintf( /* translators: %d: saved Jetpack form ID. */ __( 'Saved Jetpack form #%d', 'ran-emailoctopus-jetpack-forms' ), $form_id ),
+				self::get_invalid_target_message( $reason, $form_id, $has_peer )
+			);
+		}
+
+		return $checks;
 	}
 
 	/**
@@ -145,21 +171,50 @@ final class HealthCheck {
 	 * @return array<int,array<string,string>>
 	 */
 	private static function check_contact_form() {
-		if ( ! IntegrationResolver::is_portable_available() ) {
+		$form_ids     = IntegrationResolver::get_target_form_ids();
+		$routable_ids = self::get_routable_form_ids( $form_ids );
+
+		if ( empty( $routable_ids ) ) {
 			return array(
-				self::row( 'skipped', __( 'Saved form field mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Field mapping cannot be checked until saved-form routing is available and the selected target is valid. Jetpack notifications remain independent; EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ) ),
+				self::row( 'skipped', __( 'Saved form field mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Field mapping cannot be checked until at least one selected saved form is routable. Jetpack notifications remain independent; EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ) ),
 			);
 		}
 
-		$source_fields = EmailOctopusFieldMapper::get_source_fields();
-
-		return array(
-			self::status( ! empty( $source_fields ) ? 'pass' : 'error', __( 'Saved form fields', 'ran-emailoctopus-jetpack-forms' ), __( 'Field discovery is reading the selected saved Jetpack form.', 'ran-emailoctopus-jetpack-forms' ), __( 'No Jetpack fields were detected in the selected saved form. Edit the saved form and confirm its field blocks are inside the single contact form.', 'ran-emailoctopus-jetpack-forms' ) ),
-			self::status( ! empty( EmailOctopusFieldMapper::get_email_source_fields() ) ? 'pass' : 'error', __( 'Email field', 'ran-emailoctopus-jetpack-forms' ), __( 'Selected saved form includes a usable email field.', 'ran-emailoctopus-jetpack-forms' ), __( 'Selected saved form is missing an unambiguous email field.', 'ran-emailoctopus-jetpack-forms' ) ),
+		$source_fields       = EmailOctopusFieldMapper::get_source_fields_for_saved_forms( $routable_ids );
+		$email_source_fields = EmailOctopusFieldMapper::get_email_source_fields_for_saved_forms( $routable_ids );
+		$compatibility       = EmailOctopusFieldMapper::get_subscription_compatibility( $routable_ids );
+		$eligible_count      = count(
+			array_filter(
+				$compatibility,
+				static function ( $result ) {
+					return ! empty( $result['eligible'] );
+				}
+			)
+		);
+		$incompatible_status = 0 < $eligible_count ? 'warning' : 'error';
+		$checks              = array(
+			self::row( ! empty( $source_fields ) ? 'pass' : $incompatible_status, __( 'Shared saved-form fields', 'ran-emailoctopus-jetpack-forms' ), ! empty( $source_fields ) ? __( 'Field discovery found unambiguous fields with matching types across every routable selected form.', 'ran-emailoctopus-jetpack-forms' ) : __( 'No unambiguous Jetpack fields with matching types are shared by every routable selected form.', 'ran-emailoctopus-jetpack-forms' ) ),
+			self::row( ! empty( $email_source_fields ) ? 'pass' : $incompatible_status, __( 'Shared email fields', 'ran-emailoctopus-jetpack-forms' ), ! empty( $email_source_fields ) ? __( 'Every routable selected form shares at least one compatible email field.', 'ran-emailoctopus-jetpack-forms' ) : __( 'The routable selected forms do not share an unambiguous email field with the same normalized key and type.', 'ran-emailoctopus-jetpack-forms' ) ),
 			self::check_email_source_mapping(),
 			self::check_newsletter_source_mapping(),
-			self::status( has_filter( 'grunion_contact_form_redirect_url', array( JetpackForms::class, 'redirect_contact_form' ) ) ? 'pass' : 'error', __( 'Redirect hook', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is registered.', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is missing.', 'ran-emailoctopus-jetpack-forms' ) ),
 		);
+
+		foreach ( $compatibility as $form_id => $result ) {
+			if ( ! empty( $result['eligible'] ) ) {
+				$checks[] = self::row( 'pass', sprintf( /* translators: %d: saved Jetpack form ID. */ __( 'Subscription mapping for form #%d', 'ran-emailoctopus-jetpack-forms' ), $form_id ), __( 'Every configured source is present, unambiguous, and type-compatible on this form.', 'ran-emailoctopus-jetpack-forms' ) );
+				continue;
+			}
+
+			$checks[] = self::row(
+				0 < $eligible_count ? 'warning' : 'error',
+				sprintf( /* translators: %d: saved Jetpack form ID. */ __( 'Subscription mapping for form #%d', 'ran-emailoctopus-jetpack-forms' ), $form_id ),
+				self::get_source_failure_message( $result )
+			);
+		}
+
+		$checks[] = self::status( has_filter( 'grunion_contact_form_redirect_url', array( JetpackForms::class, 'redirect_contact_form' ) ) ? 'pass' : 'error', __( 'Redirect hook', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is registered.', 'ran-emailoctopus-jetpack-forms' ), __( 'Saved-form redirect hook is missing.', 'ran-emailoctopus-jetpack-forms' ) );
+
+		return $checks;
 	}
 
 	/**
@@ -263,31 +318,46 @@ final class HealthCheck {
 	}
 
 	/**
+	 * Keep only selected forms that can receive route-independent handling.
+	 *
+	 * @param array<int,int> $form_ids Selected saved form IDs.
+	 * @return array<int,int>
+	 */
+	private static function get_routable_form_ids( $form_ids ) {
+		return array_values( array_filter( $form_ids, array( IntegrationResolver::class, 'is_routing_eligible_form_id' ) ) );
+	}
+
+	/**
 	 * Explain how to repair an invalid selected saved-form target.
 	 *
-	 * @param string $reason  Resolver reason code.
-	 * @param int    $form_id Selected form ID.
+	 * @param string $reason   Resolver reason code.
+	 * @param int    $form_id  Selected form ID.
+	 * @param bool   $isolated Whether a valid selected peer remains active.
 	 * @return string
 	 */
-	private static function get_invalid_target_message( $reason, $form_id ) {
+	private static function get_invalid_target_message( $reason, $form_id, $isolated ) {
+		$effect = $isolated
+			? __( 'This form is isolated; valid selected peers remain active.', 'ran-emailoctopus-jetpack-forms' )
+			: __( 'EmailOctopus routing is disabled because no valid selected peer remains.', 'ran-emailoctopus-jetpack-forms' );
+
 		switch ( $reason ) {
 			case 'target_missing':
 				/* translators: %d: missing saved Jetpack form ID. */
-				return sprintf( __( 'Saved form #%d was deleted or is unavailable. Select a replacement published Jetpack form. EmailOctopus routing is disabled; Jetpack notifications remain independent.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+				return sprintf( __( 'Saved form #%d was deleted or is unavailable. Clear it or restore the saved form. ', 'ran-emailoctopus-jetpack-forms' ), $form_id ) . $effect;
 			case 'target_wrong_type':
 				/* translators: %d: selected WordPress post ID. */
-				return sprintf( __( 'Target #%d is not a jetpack_form post. Select a published saved Jetpack form. EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+				return sprintf( __( 'Target #%d is not a jetpack_form post. Clear it or select a saved Jetpack form. ', 'ran-emailoctopus-jetpack-forms' ), $form_id ) . $effect;
 			case 'target_not_published':
 				$post   = get_post( $form_id );
 				$status = $post instanceof \WP_Post ? $post->post_status : __( 'unknown', 'ran-emailoctopus-jetpack-forms' );
 
 				/* translators: 1: selected saved Jetpack form ID, 2: WordPress post status. */
-				return sprintf( __( 'Saved form #%1$d has status "%2$s". Publish it or select another published form. EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ), $form_id, $status );
+				return sprintf( __( 'Saved form #%1$d has status "%2$s". Publish it or clear the selection. ', 'ran-emailoctopus-jetpack-forms' ), $form_id, $status ) . $effect;
 			case 'target_invalid_structure':
 				/* translators: %d: selected saved Jetpack form ID. */
-				return sprintf( __( 'Saved form #%d does not contain exactly one Jetpack contact form. Repair its structure or select another saved form. EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ), $form_id );
+				return sprintf( __( 'Saved form #%d does not contain exactly one Jetpack contact form. Repair its structure or clear the selection. ', 'ran-emailoctopus-jetpack-forms' ), $form_id ) . $effect;
 			default:
-				return __( 'The selected saved Jetpack form is unavailable for EmailOctopus routing. Select a published saved form and rerun the health check.', 'ran-emailoctopus-jetpack-forms' );
+				return __( 'The selected saved Jetpack form is unavailable for EmailOctopus routing. ', 'ran-emailoctopus-jetpack-forms' ) . $effect;
 		}
 	}
 
@@ -303,23 +373,7 @@ final class HealthCheck {
 			return self::row( 'error', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'No email source is configured. Select a current email field in RAN EmailOctopus for Jetpack Forms settings.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
-		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
-			if ( ( $source_field['key'] ?? '' ) !== $email_source ) {
-				continue;
-			}
-
-			$looks_like_email = EmailOctopusFieldMapper::is_supported_email_source_field( $source_field );
-
-			if ( ! $looks_like_email ) {
-				/* translators: %s: selected Jetpack contact-form field label. */
-				return self::row( 'error', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Configured email source "%s" is not an email field.', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $email_source ) );
-			}
-
-			/* translators: %s: selected Jetpack contact-form field label. */
-			return self::row( 'pass', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Email source maps to "%s".', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $email_source ) );
-		}
-
-		return self::row( 'error', __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured email source was not detected on the active integration form.', 'ran-emailoctopus-jetpack-forms' ) );
+		return self::check_configured_source_across_forms( 'email', $email_source, __( 'Email source mapping', 'ran-emailoctopus-jetpack-forms' ) );
 	}
 
 	/**
@@ -334,21 +388,111 @@ final class HealthCheck {
 			return self::row( 'error', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), __( 'No newsletter opt-in source is configured. Select a current checkbox or consent field in RAN EmailOctopus for Jetpack Forms settings.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
-		foreach ( EmailOctopusFieldMapper::get_source_fields() as $source_field ) {
-			if ( ( $source_field['key'] ?? '' ) !== $newsletter_source ) {
+		return self::check_configured_source_across_forms( 'newsletter', $newsletter_source, __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ) );
+	}
+
+	/**
+	 * Check one configured source against every routable selected form.
+	 *
+	 * @param string $kind   Mapping kind.
+	 * @param string $source Configured normalized source key.
+	 * @param string $label  Health row label.
+	 * @return array<string,string>
+	 */
+	private static function check_configured_source_across_forms( $kind, $source, $label ) {
+		$form_ids      = self::get_routable_form_ids( IntegrationResolver::get_target_form_ids() );
+		$compatibility = EmailOctopusFieldMapper::get_subscription_compatibility( $form_ids );
+		$failed_ids    = array();
+
+		foreach ( $compatibility as $form_id => $result ) {
+			foreach ( (array) ( $result['source_failures'] ?? array() ) as $failure ) {
+				if ( is_array( $failure ) && ( $failure['kind'] ?? '' ) === $kind && ( $failure['source'] ?? '' ) === $source ) {
+					$failed_ids[] = absint( $form_id );
+					break;
+				}
+			}
+		}
+
+		if ( empty( $failed_ids ) ) {
+			$fields = 'email' === $kind ? EmailOctopusFieldMapper::get_email_source_fields_for_saved_forms( $form_ids ) : EmailOctopusFieldMapper::get_newsletter_source_fields_for_saved_forms( $form_ids );
+			$name   = $source;
+
+			foreach ( $fields as $field ) {
+				if ( ( $field['key'] ?? '' ) === $source ) {
+					$name = (string) ( $field['label'] ?? $source );
+					break;
+				}
+			}
+
+			return self::row( 'pass', $label, sprintf( /* translators: %s: selected Jetpack contact-form field label. */ __( 'Configured source "%s" is compatible across every routable selected form.', 'ran-emailoctopus-jetpack-forms' ), $name ) );
+		}
+
+		return self::row(
+			count( $failed_ids ) < count( $form_ids ) ? 'warning' : 'error',
+			$label,
+			sprintf(
+				/* translators: 1: configured source key, 2: comma-separated saved form IDs. */
+				__( 'Configured source "%1$s" is missing, ambiguous, or type-incompatible on saved form(s) %2$s. Those forms cannot send EmailOctopus subscriptions; compatible peers remain active.', 'ran-emailoctopus-jetpack-forms' ),
+				$source,
+				implode( ', ', $failed_ids )
+			)
+		);
+	}
+
+	/**
+	 * Explain every configured-source failure for one saved form.
+	 *
+	 * @param array<string,mixed> $result Mapper compatibility result.
+	 * @return string
+	 */
+	private static function get_source_failure_message( $result ) {
+		$messages = array();
+
+		foreach ( (array) ( $result['source_failures'] ?? array() ) as $failure ) {
+			if ( ! is_array( $failure ) ) {
 				continue;
 			}
 
-			if ( ! EmailOctopusFieldMapper::is_supported_newsletter_source_field( $source_field ) ) {
-				/* translators: %s: selected Jetpack contact-form field label. */
-				return self::row( 'error', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Configured newsletter source "%s" is not a checkbox or consent field.', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $newsletter_source ) );
-			}
+			$kind     = (string) ( $failure['kind'] ?? '' );
+			$tag      = (string) ( $failure['tag'] ?? '' );
+			$source   = (string) ( $failure['source'] ?? '' );
+			$reason   = (string) ( $failure['reason'] ?? '' );
+			$expected = (string) ( $failure['expected_type'] ?? '' );
+			$actual   = (string) ( $failure['actual_type'] ?? '' );
+			$name     = 'custom' === $kind && '' !== $tag ? sprintf( '%s (%s)', $source, $tag ) : $source;
 
-			/* translators: %s: selected Jetpack contact-form field label. */
-			return self::row( 'pass', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), sprintf( __( 'Newsletter opt-in maps to "%s".', 'ran-emailoctopus-jetpack-forms' ), $source_field['label'] ?? $newsletter_source ) );
+			switch ( $reason ) {
+				case 'missing':
+					$messages[] = sprintf( /* translators: %s: configured Jetpack source key. */ __( 'source "%s" is missing', 'ran-emailoctopus-jetpack-forms' ), $name );
+					break;
+				case 'ambiguous':
+					$messages[] = sprintf( /* translators: %s: configured Jetpack source key. */ __( 'source "%s" is ambiguous', 'ran-emailoctopus-jetpack-forms' ), $name );
+					break;
+				case 'wrong_type':
+				case 'type_mismatch':
+					$messages[] = sprintf(
+						/* translators: 1: configured Jetpack source key, 2: expected field type, 3: actual field type. */
+						__( 'source "%1$s" expects %2$s but is %3$s', 'ran-emailoctopus-jetpack-forms' ),
+						$name,
+						'' !== $expected ? $expected : __( 'a compatible type', 'ran-emailoctopus-jetpack-forms' ),
+						'' !== $actual ? $actual : __( 'another type', 'ran-emailoctopus-jetpack-forms' )
+					);
+					break;
+				default:
+					$messages[] = sprintf( /* translators: %s: configured Jetpack source key. */ __( 'source "%s" is incompatible', 'ran-emailoctopus-jetpack-forms' ), $name );
+					break;
+			}
 		}
 
-		return self::row( 'error', __( 'Newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ), __( 'Configured newsletter source was not detected on the active integration form.', 'ran-emailoctopus-jetpack-forms' ) );
+		if ( empty( $messages ) ) {
+			$messages[] = __( 'the configured subscription mapping is incomplete', 'ran-emailoctopus-jetpack-forms' );
+		}
+
+		return sprintf(
+			/* translators: %s: semicolon-separated mapping failure descriptions. */
+			__( 'EmailOctopus is skipped for this form because %s. Other compatible selected forms remain active.', 'ran-emailoctopus-jetpack-forms' ),
+			implode( '; ', $messages )
+		);
 	}
 
 	/**

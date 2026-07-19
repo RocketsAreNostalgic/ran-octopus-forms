@@ -123,6 +123,7 @@ final class Admin {
 		$health      = self::get_health_result();
 		$forms       = EmailOctopusApi::get_forms();
 		$saved_forms = self::get_saved_jetpack_forms();
+		$target_ids  = Settings::get_target_form_ids();
 		?>
 		<div class="wrap">
 			<style>
@@ -212,14 +213,13 @@ final class Admin {
 					<div class="inside">
 						<?php self::render_integration_mode_notice(); ?>
 						<div class="ran-emailoctopus-jetpack-forms-field">
-							<label for="ran-emailoctopus-jetpack-forms-target-form"><?php esc_html_e( 'Saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ); ?></label>
-							<?php self::saved_form_dropdown( $saved_forms, absint( $settings['target_form_id'] ?? 0 ) ); ?>
-							<p class="description"><?php esc_html_e( 'This saved form is the sole EmailOctopus target wherever Jetpack reuses it. Select one published form definition, not an individual page where it appears.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+							<?php self::saved_form_checkboxes( $saved_forms, $target_ids ); ?>
+							<p class="description"><?php esc_html_e( 'Every selected saved form shares this EmailOctopus destination, field mapping, success page, and outcome messages wherever Jetpack reuses it.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 						</div>
 						<div class="ran-emailoctopus-jetpack-forms-field">
 							<label for="ran-emailoctopus-jetpack-forms-success-page"><?php esc_html_e( 'Success page', 'ran-emailoctopus-jetpack-forms' ); ?></label>
 							<?php self::page_dropdown( 'success_page_id', 'ran-emailoctopus-jetpack-forms-success-page', absint( $settings['success_page_id'] ) ); ?>
-							<p class="description"><?php esc_html_e( 'The success destination remains one page for every route that embeds the selected saved form.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The success destination remains one page for every route that embeds any selected saved form.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 						</div>
 					</div>
 				</fieldset>
@@ -337,26 +337,62 @@ final class Admin {
 	 * @return void
 	 */
 	private static function render_integration_mode_notice() {
-		$reason = IntegrationResolver::get_portability_reason();
+		$form_ids       = IntegrationResolver::get_target_form_ids();
+		$routable_ids   = array_values( array_filter( $form_ids, array( IntegrationResolver::class, 'is_routing_eligible_form_id' ) ) );
+		$compatibility  = EmailOctopusFieldMapper::get_subscription_compatibility( $form_ids );
+		$subscriber_ids = array_keys(
+			array_filter(
+				$compatibility,
+				static function ( $result ) {
+					return ! empty( $result['eligible'] );
+				}
+			)
+		);
 
-		if ( IntegrationResolver::is_portable_available() ) {
-			$form_id = IntegrationResolver::get_target_form_id();
+		if ( ! IntegrationResolver::supports_portable_forms() ) {
 			?>
-			<div class="notice notice-success inline"><p>
-				<?php
-				/* translators: %d: selected saved Jetpack form ID. */
-				echo esc_html( sprintf( __( 'Saved-form routing is active for form #%d. The same integration follows this form across routes.', 'ran-emailoctopus-jetpack-forms' ), $form_id ) );
-				?>
+			<div class="notice notice-error inline"><p>
+				<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
+				<?php echo esc_html( ' ' . self::get_portability_reason_message( 'feedback_identity_unavailable' ) ); ?>
 			</p></div>
 			<?php
 			return;
 		}
 
-		$reason_message = self::get_portability_reason_message( $reason );
+		if ( empty( $form_ids ) ) {
+			?>
+			<div class="notice notice-error inline"><p>
+				<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
+				<?php echo esc_html( ' ' . self::get_portability_reason_message( 'target_not_selected' ) ); ?>
+			</p></div>
+			<?php
+			return;
+		}
+
+		if ( empty( $routable_ids ) ) {
+			?>
+			<div class="notice notice-error inline"><p>
+				<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
+				<?php esc_html_e( 'None of the selected saved forms is currently routable. Review the unavailable selections and health check.', 'ran-emailoctopus-jetpack-forms' ); ?>
+			</p></div>
+			<?php
+			return;
+		}
+
+		$status_class = count( $routable_ids ) === count( $form_ids ) && count( $subscriber_ids ) === count( $form_ids ) ? 'notice-success' : 'notice-warning';
 		?>
-		<div class="notice notice-error inline"><p>
-			<strong><?php esc_html_e( 'EmailOctopus routing is disabled.', 'ran-emailoctopus-jetpack-forms' ); ?></strong>
-			<?php echo esc_html( ' ' . $reason_message ); ?>
+		<div class="notice <?php echo esc_attr( $status_class ); ?> inline"><p>
+			<?php
+			echo esc_html(
+				sprintf(
+					/* translators: 1: number of routable forms, 2: number of selected forms, 3: number of subscription-compatible forms. */
+					__( 'Saved-form routing is active for %1$d of %2$d selected form(s); EmailOctopus subscriptions are active for %3$d. Invalid or incompatible forms are isolated while valid peers remain active.', 'ran-emailoctopus-jetpack-forms' ),
+					count( $routable_ids ),
+					count( $form_ids ),
+					count( $subscriber_ids )
+				)
+			);
+			?>
 		</p></div>
 		<?php
 	}
@@ -384,36 +420,55 @@ final class Admin {
 	}
 
 	/**
-	 * Render the published saved-form selector while preserving stale targets.
+	 * Render published saved-form checkboxes while preserving stale targets.
 	 *
 	 * @param array<int,\WP_Post> $forms    Published saved forms.
-	 * @param int                 $selected Selected or stale form ID.
+	 * @param array<int,int>      $selected Selected or stale form IDs.
 	 * @return void
 	 */
-	private static function saved_form_dropdown( $forms, $selected ) {
-		$selected_found = false;
+	private static function saved_form_checkboxes( $forms, $selected ) {
+		$selected      = array_fill_keys( array_map( 'absint', $selected ), true );
+		$available_ids = array();
+		$setting_name  = Settings::OPTION_NAME . '[target_form_ids][]';
 		?>
-		<select class="regular-text" id="ran-emailoctopus-jetpack-forms-target-form" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[target_form_id]">
-			<option value="0"><?php esc_html_e( 'Select a saved Jetpack form', 'ran-emailoctopus-jetpack-forms' ); ?></option>
+		<fieldset id="ran-emailoctopus-jetpack-forms-target-forms">
+			<legend class="ran-emailoctopus-jetpack-forms-field-label"><?php esc_html_e( 'Saved Jetpack forms', 'ran-emailoctopus-jetpack-forms' ); ?></legend>
+			<input type="hidden" name="<?php echo esc_attr( $setting_name ); ?>" value="0" />
 			<?php foreach ( $forms as $form ) : ?>
 				<?php
 				if ( ! $form instanceof \WP_Post ) {
 					continue;
 				}
 
-				$form_id        = absint( $form->ID );
-				$selected_found = $selected_found || $form_id === $selected;
-				$title          = '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
+				$form_id                   = absint( $form->ID );
+				$available_ids[ $form_id ] = true;
+				$title                     = '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
 				/* translators: 1: saved Jetpack form title, 2: post ID. */
 				$label = sprintf( __( '%1$s (#%2$d)', 'ran-emailoctopus-jetpack-forms' ), $title, $form_id );
 				?>
-				<option value="<?php echo esc_attr( $form_id ); ?>" <?php selected( $selected, $form_id ); ?>><?php echo esc_html( $label ); ?></option>
+				<p>
+					<label for="ran-emailoctopus-jetpack-forms-target-form-<?php echo esc_attr( $form_id ); ?>">
+						<input id="ran-emailoctopus-jetpack-forms-target-form-<?php echo esc_attr( $form_id ); ?>" type="checkbox" name="<?php echo esc_attr( $setting_name ); ?>" value="<?php echo esc_attr( $form_id ); ?>" <?php checked( isset( $selected[ $form_id ] ) ); ?> />
+						<?php echo esc_html( $label ); ?>
+					</label>
+				</p>
 			<?php endforeach; ?>
-			<?php if ( 0 < $selected && ! $selected_found ) : ?>
-				<?php /* translators: %d: unavailable saved Jetpack form ID. */ ?>
-				<option value="<?php echo esc_attr( $selected ); ?>" selected><?php echo esc_html( sprintf( __( 'Unavailable saved form (#%d)', 'ran-emailoctopus-jetpack-forms' ), $selected ) ); ?></option>
-			<?php endif; ?>
-		</select>
+			<?php foreach ( array_keys( $selected ) as $form_id ) : ?>
+				<?php if ( isset( $available_ids[ $form_id ] ) ) : ?>
+					<?php continue; ?>
+				<?php endif; ?>
+				<p>
+					<label for="ran-emailoctopus-jetpack-forms-target-form-<?php echo esc_attr( $form_id ); ?>">
+						<input id="ran-emailoctopus-jetpack-forms-target-form-<?php echo esc_attr( $form_id ); ?>" type="checkbox" name="<?php echo esc_attr( $setting_name ); ?>" value="<?php echo esc_attr( $form_id ); ?>" checked />
+						<?php /* translators: %d: unavailable saved Jetpack form ID. */ ?>
+						<?php echo esc_html( sprintf( __( 'Unavailable saved form (#%d)', 'ran-emailoctopus-jetpack-forms' ), $form_id ) ); ?>
+					</label>
+					<span class="description">
+						<?php echo esc_html( ' ' . self::get_portability_reason_message( IntegrationResolver::get_target_form_reason( $form_id ) ) ); ?>
+					</span>
+				</p>
+			<?php endforeach; ?>
+		</fieldset>
 		<?php if ( empty( $forms ) ) : ?>
 			<p class="description"><?php esc_html_e( 'No published saved Jetpack forms were found. Create and publish a saved form in Jetpack, then return here.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 		<?php endif; ?>
@@ -433,13 +488,13 @@ final class Admin {
 			case 'target_not_selected':
 				return __( 'Select a published saved Jetpack form to enable EmailOctopus routing.', 'ran-emailoctopus-jetpack-forms' );
 			case 'target_missing':
-				return __( 'The selected saved form was deleted or is unavailable. Select a replacement published saved Jetpack form; EmailOctopus routing remains disabled.', 'ran-emailoctopus-jetpack-forms' );
+				return __( 'The selected saved form was deleted or is unavailable. It remains selected for diagnostics but is isolated until you clear it or restore the saved form.', 'ran-emailoctopus-jetpack-forms' );
 			case 'target_wrong_type':
-				return __( 'The selected target is not a Jetpack saved form. Select a published Jetpack form; EmailOctopus routing remains disabled.', 'ran-emailoctopus-jetpack-forms' );
+				return __( 'The selected target is not a Jetpack saved form. It remains selected for diagnostics but is isolated until you clear it or select a published saved form.', 'ran-emailoctopus-jetpack-forms' );
 			case 'target_not_published':
-				return __( 'The selected saved Jetpack form is not published. Publish it or select another published form; EmailOctopus routing remains disabled.', 'ran-emailoctopus-jetpack-forms' );
+				return __( 'The selected saved Jetpack form is not published. It remains selected for diagnostics but is isolated until you publish it or clear the selection.', 'ran-emailoctopus-jetpack-forms' );
 			case 'target_invalid_structure':
-				return __( 'The selected saved form does not contain exactly one Jetpack contact form. Repair the saved form or select another one; EmailOctopus routing remains disabled.', 'ran-emailoctopus-jetpack-forms' );
+				return __( 'The selected saved form does not contain exactly one Jetpack contact form. It remains selected for diagnostics but is isolated until you repair it or clear the selection.', 'ran-emailoctopus-jetpack-forms' );
 			default:
 				return __( 'Saved-form targeting is unavailable. Review the health check and select a valid published Jetpack form.', 'ran-emailoctopus-jetpack-forms' );
 		}
@@ -675,31 +730,30 @@ final class Admin {
 	 * @return void
 	 */
 	private static function newsletter_source_dropdown( $selected ) {
-		$source_fields  = EmailOctopusFieldMapper::get_newsletter_source_fields();
-		$is_stale       = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
-		$stale_selected = $is_stale ? $selected : '';
-		$replacement    = $is_stale && 1 === count( $source_fields ) ? (string) $source_fields[0]['key'] : '';
+		$source_fields = EmailOctopusFieldMapper::get_newsletter_source_fields();
+		$is_stale      = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
 
 		if ( '' === $selected && 1 === count( $source_fields ) ) {
 			$selected = (string) $source_fields[0]['key'];
-		} elseif ( '' !== $replacement ) {
-			$selected = $replacement;
 		}
 
 		$needs_choice = '' === $selected;
 
-		if ( empty( $source_fields ) ) {
+		if ( empty( $source_fields ) && ! $is_stale ) {
 			?>
 			<select class="regular-text" id="ran-emailoctopus-jetpack-forms-newsletter-source" disabled>
 				<option><?php esc_html_e( 'No Jetpack opt-in fields detected', 'ran-emailoctopus-jetpack-forms' ); ?></option>
 			</select>
-			<p class="description error"><strong><?php esc_html_e( 'The configured contact form has no checkbox or consent field that can record newsletter consent. Newsletter subscriptions are paused until you add one and save this setting.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
+			<p class="description error"><strong><?php esc_html_e( 'The selected saved forms have no shared checkbox or consent field that can record newsletter consent. Subscriptions are paused until their fields are made compatible and this setting is saved.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
 			<?php
 			return;
 		}
 
 		?>
 		<select class="regular-text" id="ran-emailoctopus-jetpack-forms-newsletter-source" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[newsletter_source]">
+			<?php if ( $is_stale ) : ?>
+				<option value="<?php echo esc_attr( $selected ); ?>" selected><?php echo esc_html( sprintf( /* translators: %s: unavailable Jetpack field key. */ __( 'Unavailable source: %s', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $selected ) ) ); ?></option>
+			<?php endif; ?>
 			<?php if ( $needs_choice ) : ?>
 				<option value="" disabled hidden selected><?php esc_html_e( 'Choose a newsletter opt-in source', 'ran-emailoctopus-jetpack-forms' ); ?></option>
 			<?php endif; ?>
@@ -710,7 +764,7 @@ final class Admin {
 			<?php endforeach; ?>
 		</select>
 		<?php if ( $is_stale ) : ?>
-			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved newsletter opt-in field "%s" is no longer a current checkbox or consent field on the configured contact form. The only current supported field is selected above; save settings to confirm this replacement. Newsletter subscriptions remain paused until it is saved.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $stale_selected ) ) ); ?></strong></p>
+			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs. */ __( 'The saved newsletter opt-in field "%1$s" is unavailable or incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $selected ), self::get_source_failure_form_ids_label( 'newsletter', $selected ) ) ); ?></strong></p>
 		<?php elseif ( $needs_choice ) : ?>
 			<p class="description error"><strong><?php esc_html_e( 'Select a current checkbox or consent field before newsletter subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
 		<?php else : ?>
@@ -726,31 +780,30 @@ final class Admin {
 	 * @return void
 	 */
 	private static function emailoctopus_email_source_dropdown( $selected ) {
-		$source_fields  = EmailOctopusFieldMapper::get_email_source_fields();
-		$is_stale       = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
-		$stale_selected = $is_stale ? $selected : '';
-		$replacement    = $is_stale && 1 === count( $source_fields ) ? (string) $source_fields[0]['key'] : '';
+		$source_fields = EmailOctopusFieldMapper::get_email_source_fields();
+		$is_stale      = '' !== $selected && ! self::has_source_field( $source_fields, $selected );
 
 		if ( '' === $selected && 1 === count( $source_fields ) ) {
 			$selected = (string) $source_fields[0]['key'];
-		} elseif ( '' !== $replacement ) {
-			$selected = $replacement;
 		}
 
 		$needs_choice = '' === $selected;
 
-		if ( empty( $source_fields ) ) {
+		if ( empty( $source_fields ) && ! $is_stale ) {
 			?>
 			<select class="regular-text" id="ran-emailoctopus-jetpack-forms-emailoctopus-email-source" disabled>
 				<option><?php esc_html_e( 'No Jetpack email fields detected', 'ran-emailoctopus-jetpack-forms' ); ?></option>
 			</select>
-			<p class="description error"><strong><?php esc_html_e( 'The configured contact form has no email field. EmailOctopus subscriptions are paused until you add one and save this setting.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
+			<p class="description error"><strong><?php esc_html_e( 'The selected saved forms have no shared email field. EmailOctopus subscriptions are paused until their fields are made compatible and this setting is saved.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
 			<?php
 			return;
 		}
 
 		?>
 		<select class="regular-text" id="ran-emailoctopus-jetpack-forms-emailoctopus-email-source" name="<?php echo esc_attr( Settings::OPTION_NAME ); ?>[emailoctopus_email_source]">
+			<?php if ( $is_stale ) : ?>
+				<option value="<?php echo esc_attr( $selected ); ?>" selected><?php echo esc_html( sprintf( /* translators: %s: unavailable Jetpack field key. */ __( 'Unavailable source: %s', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $selected ) ) ); ?></option>
+			<?php endif; ?>
 			<?php if ( $needs_choice ) : ?>
 				<option value="" disabled hidden selected><?php esc_html_e( 'Choose an email source', 'ran-emailoctopus-jetpack-forms' ); ?></option>
 			<?php endif; ?>
@@ -761,7 +814,7 @@ final class Admin {
 			<?php endforeach; ?>
 		</select>
 		<?php if ( $is_stale ) : ?>
-			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved email source "%s" is no longer a current email field on the configured contact form. The only current supported field is selected above; save settings to confirm this replacement. EmailOctopus subscriptions remain paused until it is saved.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $stale_selected ) ) ); ?></strong></p>
+			<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs. */ __( 'The saved email source "%1$s" is unavailable or incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $selected ), self::get_source_failure_form_ids_label( 'email', $selected ) ) ); ?></strong></p>
 		<?php elseif ( $needs_choice ) : ?>
 			<p class="description error"><strong><?php esc_html_e( 'Select a current email field before EmailOctopus subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ); ?></strong></p>
 		<?php else : ?>
@@ -819,6 +872,39 @@ final class Admin {
 	}
 
 	/**
+	 * List selected forms where a configured source is incompatible.
+	 *
+	 * @param string $kind   Mapping kind: email, newsletter, or custom.
+	 * @param string $source Configured normalized source key.
+	 * @param string $tag    Optional EmailOctopus custom-field tag.
+	 * @return string
+	 */
+	private static function get_source_failure_form_ids_label( $kind, $source, $tag = '' ) {
+		$form_ids      = IntegrationResolver::get_target_form_ids();
+		$compatibility = EmailOctopusFieldMapper::get_subscription_compatibility( $form_ids );
+		$failed_ids    = array();
+
+		foreach ( $compatibility as $form_id => $result ) {
+			foreach ( (array) ( $result['source_failures'] ?? array() ) as $failure ) {
+				if ( ! is_array( $failure ) || ( $failure['kind'] ?? '' ) !== $kind || ( $failure['source'] ?? '' ) !== $source ) {
+					continue;
+				}
+
+				if ( 'custom' === $kind && ( $failure['tag'] ?? '' ) !== $tag ) {
+					continue;
+				}
+
+				$failed_ids[] = absint( $form_id );
+				break;
+			}
+		}
+
+		$failed_ids = array_values( array_filter( array_unique( $failed_ids ) ) );
+
+		return empty( $failed_ids ) ? implode( ', ', $form_ids ) : implode( ', ', $failed_ids );
+	}
+
+	/**
 	 * Render EmailOctopus field mapping controls.
 	 *
 	 * @param array<int,array<string,string>>|\WP_Error $forms    Available forms.
@@ -851,9 +937,12 @@ final class Admin {
 
 		if ( empty( $source_fields ) ) {
 			?>
-			<p class="description"><?php esc_html_e( 'No Jetpack fields were detected on the selected saved form.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
+			<p class="description"><?php esc_html_e( 'No unambiguous, type-compatible Jetpack fields are shared by every structurally valid selected saved form.', 'ran-emailoctopus-jetpack-forms' ); ?></p>
 			<?php
-			return;
+
+			if ( empty( $field_map ) ) {
+				return;
+			}
 		}
 
 		?>
@@ -904,7 +993,7 @@ final class Admin {
 									<?php endforeach; ?>
 								</select>
 								<?php if ( $is_stale ) : ?>
-									<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: %s: saved Jetpack field key. */ __( 'The saved Jetpack source "%s" is no longer on the configured contact form. Choose a current field or select Do not send, then save settings.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $source ) ) ); ?></strong></p>
+									<p class="description error"><strong><?php echo esc_html( sprintf( /* translators: 1: saved Jetpack field key, 2: comma-separated saved form IDs. */ __( 'The saved Jetpack source "%1$s" is unavailable or type-incompatible on saved form(s) %2$s. It is preserved until you deliberately choose a compatible replacement or Do not send.', 'ran-emailoctopus-jetpack-forms' ), self::get_source_key_label( $source ), self::get_source_failure_form_ids_label( 'custom', $source, $tag ) ) ); ?></strong></p>
 								<?php endif; ?>
 							</td>
 							<td>

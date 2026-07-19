@@ -14,9 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Route-independent configuration resolved for one logical integration.
  *
- * Option 1 has only the `default` profile and one form reference. Keeping form
- * IDs as a collection lets later roadmap options add compatible references
- * without changing the runtime contract.
+ * Option 2 has only the `default` profile, with a canonical collection of
+ * compatible saved-form references sharing one integration configuration.
  */
 final class IntegrationProfile {
 	/**
@@ -49,7 +48,7 @@ final class IntegrationProfile {
 	 */
 	public function __construct( $id, $form_ids, $configuration ) {
 		$this->id            = sanitize_key( $id );
-		$this->form_ids      = array_values( array_filter( array_map( 'absint', $form_ids ) ) );
+		$this->form_ids      = Settings::normalize_target_form_ids( $form_ids );
 		$this->configuration = $configuration;
 	}
 
@@ -69,33 +68,6 @@ final class IntegrationProfile {
 	 */
 	public function get_form_ids() {
 		return $this->form_ids;
-	}
-
-	/**
-	 * Alias describing the collection's role for callers.
-	 *
-	 * @return array<int,int>
-	 */
-	public function get_target_form_ids() {
-		return $this->get_form_ids();
-	}
-
-	/**
-	 * Get the first selected form ID.
-	 *
-	 * @return int
-	 */
-	public function get_target_form_id() {
-		return isset( $this->form_ids[0] ) ? $this->form_ids[0] : 0;
-	}
-
-	/**
-	 * Alias retained for code that describes Option 1's single primary target.
-	 *
-	 * @return int
-	 */
-	public function get_primary_target_form_id() {
-		return $this->get_target_form_id();
 	}
 
 	/**

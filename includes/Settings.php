@@ -47,7 +47,7 @@ final class Settings {
 	 */
 	public static function get_defaults() {
 		return array(
-			'target_form_id'                  => 0,
+			'target_form_ids'                 => array(),
 			'success_page_id'                 => 0,
 			'emailoctopus_form_id'            => self::EMAILOCTOPUS_FORM_ID,
 			'emailoctopus_list_id'            => '',
@@ -81,10 +81,41 @@ final class Settings {
 				continue;
 			}
 
-			$emailoctopus_settings = array_intersect_key( $legacy_settings, self::get_defaults() );
+			$migration_keys                   = self::get_defaults();
+			$migration_keys['target_form_id'] = 0;
+			$emailoctopus_settings            = array_intersect_key( $legacy_settings, $migration_keys );
 			add_option( self::OPTION_NAME, $emailoctopus_settings, '', false );
 			return;
 		}
+	}
+
+	/**
+	 * Migrate the one-form scalar setting to the canonical form-ID collection.
+	 *
+	 * The presence of target_form_ids is the schema marker. Once it exists, the
+	 * retired scalar is never read again and is removed if still present.
+	 *
+	 * @return void
+	 */
+	private static function migrate_target_form_ids() {
+		$stored = get_option( self::OPTION_NAME, false );
+
+		if ( ! is_array( $stored ) ) {
+			return;
+		}
+
+		$has_collection = array_key_exists( 'target_form_ids', $stored );
+		$raw_form_ids   = $has_collection ? $stored['target_form_ids'] : array( $stored['target_form_id'] ?? 0 );
+		$form_ids       = self::normalize_target_form_ids( $raw_form_ids );
+		$changed        = ! $has_collection || $form_ids !== $raw_form_ids || array_key_exists( 'target_form_id', $stored );
+
+		if ( ! $changed ) {
+			return;
+		}
+
+		$stored['target_form_ids'] = $form_ids;
+		unset( $stored['target_form_id'] );
+		update_option( self::OPTION_NAME, $stored, false );
 	}
 
 	/**
@@ -97,6 +128,7 @@ final class Settings {
 	 */
 	public static function upgrade() {
 		self::migrate_legacy_settings();
+		self::migrate_target_form_ids();
 		self::remove_obsolete_contact_page_setting();
 
 		if ( ! version_compare( (string) get_option( self::VERSION_OPTION, '0.0.0' ), RAN_EMAILOCTOPUS_JETPACK_FORMS_VERSION, '<' ) ) {
@@ -154,6 +186,7 @@ final class Settings {
 	 */
 	public static function get_all() {
 		self::migrate_legacy_settings();
+		self::migrate_target_form_ids();
 
 		$settings = get_option( self::OPTION_NAME, array() );
 
@@ -195,12 +228,12 @@ final class Settings {
 	 * @return array<string,mixed>
 	 */
 	public static function sanitize( $input ) {
-		$input          = is_array( $input ) ? $input : array();
-		$current        = self::get_all();
-		$settings       = self::get_defaults();
-		$target_form_id = absint( $input['target_form_id'] ?? $current['target_form_id'] ?? 0 );
+		$input           = is_array( $input ) ? $input : array();
+		$current         = self::get_all();
+		$settings        = self::get_defaults();
+		$target_form_ids = self::normalize_target_form_ids( array_key_exists( 'target_form_ids', $input ) ? $input['target_form_ids'] : $current['target_form_ids'] );
 
-		$settings['target_form_id']  = $target_form_id;
+		$settings['target_form_ids'] = $target_form_ids;
 		$settings['success_page_id'] = absint( $input['success_page_id'] ?? 0 );
 		if ( array_key_exists( 'emailoctopus_destination', $input ) ) {
 			$destination = sanitize_text_field( $input['emailoctopus_destination'] );
@@ -223,8 +256,8 @@ final class Settings {
 		$settings['emailoctopus_failure_message']    = sanitize_textarea_field( $input['emailoctopus_failure_message'] ?? $settings['emailoctopus_failure_message'] );
 		$settings['newsletter_source']               = EmailOctopusFieldMapper::normalize_source_key( (string) ( $input['newsletter_source'] ?? $current['newsletter_source'] ?? '' ) );
 
-		self::warn_about_invalid_target( $target_form_id );
-		self::warn_about_invalid_source_mappings( $settings, $target_form_id );
+		self::warn_about_invalid_targets( $target_form_ids );
+		self::warn_about_invalid_source_mappings( $settings, $target_form_ids );
 
 		return $settings;
 	}
@@ -237,31 +270,50 @@ final class Settings {
 	 * both sources are valid.
 	 *
 	 * @param array<string,mixed> $settings       Sanitized settings.
-	 * @param int                 $target_form_id Saved Jetpack form ID.
+	 * @param array<int,int>      $target_form_ids Saved Jetpack form IDs.
 	 * @return void
 	 */
-	private static function warn_about_invalid_source_mappings( $settings, $target_form_id ) {
+	private static function warn_about_invalid_source_mappings( $settings, $target_form_ids ) {
 		if ( '' === (string) ( $settings['emailoctopus_form_id'] ?? '' ) && '' === (string) ( $settings['emailoctopus_list_id'] ?? '' ) ) {
 			return;
 		}
 
-		$email_fields      = EmailOctopusFieldMapper::get_email_source_fields_for_saved_form( $target_form_id );
-		$newsletter_fields = EmailOctopusFieldMapper::get_newsletter_source_fields_for_saved_form( $target_form_id );
+		$compatibility      = EmailOctopusFieldMapper::get_subscription_compatibility( $target_form_ids, $settings );
+		$invalid_email      = array();
+		$invalid_newsletter = array();
 
-		if ( ! self::has_valid_source_field( $email_fields, (string) ( $settings['emailoctopus_email_source'] ?? '' ) ) ) {
+		foreach ( $compatibility as $form_id => $result ) {
+			if ( in_array( 'email_source_missing', $result['reasons'], true ) || in_array( 'email_source_invalid', $result['reasons'], true ) ) {
+				$invalid_email[] = $form_id;
+			}
+
+			if ( in_array( 'newsletter_source_missing', $result['reasons'], true ) || in_array( 'newsletter_source_invalid', $result['reasons'], true ) ) {
+				$invalid_newsletter[] = $form_id;
+			}
+		}
+
+		if ( ! empty( $invalid_email ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_octopus_forms_invalid_email_source',
-				__( 'EmailOctopus email source needs attention: select a current email field before subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
+				sprintf(
+					/* translators: %s: comma-separated saved Jetpack form IDs. */
+					__( 'EmailOctopus email source needs attention on saved form(s) %s: select a current email field before subscriptions can run for those forms.', 'ran-emailoctopus-jetpack-forms' ),
+					implode( ', ', $invalid_email )
+				),
 				'warning'
 			);
 		}
 
-		if ( ! self::has_valid_source_field( $newsletter_fields, (string) ( $settings['newsletter_source'] ?? '' ) ) ) {
+		if ( ! empty( $invalid_newsletter ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_octopus_forms_invalid_newsletter_source',
-				__( 'Newsletter opt-in source needs attention: select a current checkbox or consent field before subscriptions can run.', 'ran-emailoctopus-jetpack-forms' ),
+				sprintf(
+					/* translators: %s: comma-separated saved Jetpack form IDs. */
+					__( 'Newsletter opt-in source needs attention on saved form(s) %s: select a current checkbox or consent field before subscriptions can run for those forms.', 'ran-emailoctopus-jetpack-forms' ),
+					implode( ', ', $invalid_newsletter )
+				),
 				'warning'
 			);
 		}
@@ -273,11 +325,11 @@ final class Settings {
 	 * Invalid selections remain stored so the settings screen and health check can
 	 * explain the broken target while all EmailOctopus side effects stay disabled.
 	 *
-	 * @param int $target_form_id Saved Jetpack form ID.
+	 * @param array<int,int> $target_form_ids Saved Jetpack form IDs.
 	 * @return void
 	 */
-	private static function warn_about_invalid_target( $target_form_id ) {
-		if ( 0 >= $target_form_id ) {
+	private static function warn_about_invalid_targets( $target_form_ids ) {
+		if ( empty( $target_form_ids ) ) {
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_emailoctopus_target_required',
@@ -287,37 +339,24 @@ final class Settings {
 			return;
 		}
 
-		$form = get_post( $target_form_id );
+		foreach ( $target_form_ids as $target_form_id ) {
+			$form = get_post( $target_form_id );
 
-		if ( ! $form instanceof \WP_Post || 'jetpack_form' !== $form->post_type || 'publish' !== $form->post_status || ! self::has_valid_saved_form_structure( $target_form_id ) ) {
+			if ( $form instanceof \WP_Post && 'jetpack_form' === $form->post_type && 'publish' === $form->post_status && self::has_valid_saved_form_structure( $target_form_id ) ) {
+				continue;
+			}
+
 			add_settings_error(
 				self::OPTION_NAME,
 				'ran_emailoctopus_target_invalid',
-				__( 'The selected target must be a published, structurally valid saved Jetpack form. EmailOctopus subscriptions are disabled until it is corrected.', 'ran-emailoctopus-jetpack-forms' ),
+				sprintf(
+					/* translators: %d: saved Jetpack form ID. */
+					__( 'Selected target #%d must be a published, structurally valid saved Jetpack form. It remains selected for diagnostics but is isolated from integration handling.', 'ran-emailoctopus-jetpack-forms' ),
+					$target_form_id
+				),
 				'error'
 			);
 		}
-	}
-
-	/**
-	 * Whether a saved source belongs to the current source candidates.
-	 *
-	 * @param array<int,array<string,string>> $source_fields Candidate fields.
-	 * @param string                           $source        Saved source key.
-	 * @return bool
-	 */
-	private static function has_valid_source_field( $source_fields, $source ) {
-		if ( '' === $source ) {
-			return false;
-		}
-
-		foreach ( $source_fields as $source_field ) {
-			if ( ( $source_field['key'] ?? '' ) === $source ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**
@@ -367,15 +406,39 @@ final class Settings {
 	}
 
 	/**
-	 * Get the selected saved Jetpack form ID, including an invalid stored target.
+	 * Normalize selected saved Jetpack form IDs.
 	 *
-	 * Keeping the raw sanitized ID lets diagnostics explain deleted, draft, and
-	 * wrong-type selections instead of silently reverting configuration.
-	 *
-	 * @return int
+	 * @param mixed $form_ids Raw selected form IDs.
+	 * @return array<int,int>
 	 */
-	public static function get_target_form_id() {
-		return absint( self::get( 'target_form_id' ) );
+	public static function normalize_target_form_ids( $form_ids ) {
+		$form_ids   = is_array( $form_ids ) ? $form_ids : array();
+		$normalized = array();
+
+		foreach ( $form_ids as $form_id ) {
+			if ( is_bool( $form_id ) || ! is_scalar( $form_id ) || ! preg_match( '/^\d+$/', (string) $form_id ) ) {
+				continue;
+			}
+
+			$form_id = (int) $form_id;
+
+			if ( 0 < $form_id ) {
+				$normalized[ $form_id ] = $form_id;
+			}
+		}
+
+		ksort( $normalized, SORT_NUMERIC );
+
+		return array_values( $normalized );
+	}
+
+	/**
+	 * Get selected saved Jetpack form IDs, including unavailable selections.
+	 *
+	 * @return array<int,int>
+	 */
+	public static function get_target_form_ids() {
+		return self::normalize_target_form_ids( self::get( 'target_form_ids' ) );
 	}
 
 	/**

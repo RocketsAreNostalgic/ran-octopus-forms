@@ -12,7 +12,7 @@ use RAN\EmailOctopusJetpackForms\Settings;
 use RAN\EmailOctopusJetpackForms\SubmissionMessages;
 
 	/**
-	 * Prove one saved Jetpack form is portable and signed end-to-end.
+	 * Prove selected saved Jetpack forms are portable and signed end-to-end.
 	 */
 class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCase {
 		/**
@@ -72,6 +72,65 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 	}
 
 	/**
+	 * Multiple selected saved forms are marked independently on one route.
+	 *
+	 * @return void
+	 */
+	public function test_multiple_selected_forms_are_marked_while_unselected_form_is_untouched() {
+		$first_form_id  = $this->create_portable_form();
+		$second_form_id = $this->create_portable_form();
+		$other_form_id  = $this->create_portable_form();
+
+		$this->configure_portable_forms( array( $first_form_id, $second_form_id ) );
+
+		foreach ( array( $first_form_id, $second_form_id ) as $form_id ) {
+			$html = $this->render_form_html( $form_id );
+
+			$this->assertStringContainsString( 'name="' . JetpackForms::PROFILE_FIELD . '" value="default"', $html );
+			$this->assertStringContainsString( 'name="' . JetpackForms::FORM_REF_FIELD . '" value="' . $form_id . '"', $html );
+			$this->assertStringContainsString( 'name="' . JetpackForms::TARGET_FIELD . '"', $html );
+		}
+
+		$this->assertSame( '<form></form>', $this->render_form_html( $other_form_id ) );
+		$this->assertTrue( JetpackForms::disable_ajax_for_contact_form( true ) );
+	}
+
+	/**
+	 * Jetpack's synced-form pre-render short circuit cannot leak context forward.
+	 *
+	 * @return void
+	 */
+	public function test_pre_rendered_selected_form_does_not_mark_an_adjacent_unselected_form() {
+		$selected_form_id = $this->create_portable_form();
+		$other_form_id    = $this->create_portable_form();
+
+		$this->configure_portable_forms( array( $selected_form_id ) );
+		JetpackForms::before_render_block(
+			null,
+			array(
+				'blockName' => 'jetpack/contact-form',
+				'attrs'     => array( 'ref' => $selected_form_id ),
+			)
+		);
+
+		$selected_html = JetpackForms::mark_target_form_submission( '<form></form>' );
+
+		// Jetpack returns from pre_render_block, so render_block never fires for
+		// the selected outer reference before the next sibling starts rendering.
+		JetpackForms::before_render_block(
+			null,
+			array(
+				'blockName' => 'jetpack/contact-form',
+				'attrs'     => array( 'ref' => $other_form_id ),
+			)
+		);
+		$other_html = JetpackForms::mark_target_form_submission( '<form></form>' );
+
+		$this->assertStringContainsString( 'value="' . $selected_form_id . '"', $selected_html );
+		$this->assertSame( '<form></form>', $other_html );
+	}
+
+	/**
 	 * An unconfigured integration never changes Jetpack form behavior.
 	 *
 	 * @return void
@@ -113,6 +172,28 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 		$this->assertTrue( JetpackForms::is_target_submission( $feedback_id ) );
 
 		Feedback::$form_ids[ $feedback_id ] = $other_form_id;
+		$this->assertFalse( JetpackForms::is_target_submission( $feedback_id ) );
+		$this->assertSame(
+			'https://example.org/original/',
+			JetpackForms::redirect_contact_form( 'https://example.org/original/', 123, $feedback_id )
+		);
+	}
+
+	/**
+	 * Signed context cannot be swapped between two selected forms.
+	 *
+	 * @return void
+	 */
+	public function test_feedback_identity_must_match_exact_selected_form() {
+		$first_form_id  = $this->create_portable_form();
+		$second_form_id = $this->create_portable_form();
+		$feedback_id    = self::factory()->post->create();
+
+		$this->configure_portable_forms( array( $first_form_id, $second_form_id ) );
+		$_POST                              = $this->get_context_from_html( $this->render_form_html( $first_form_id ) );
+		Feedback::$form_ids[ $feedback_id ] = $second_form_id;
+
+		$this->assertTrue( JetpackForms::is_target_submission() );
 		$this->assertFalse( JetpackForms::is_target_submission( $feedback_id ) );
 		$this->assertSame(
 			'https://example.org/original/',
@@ -162,24 +243,73 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 		 * @return void
 		 */
 	public function test_marker_for_previous_target_is_rejected_after_settings_change() {
-		$form_id = $this->configure_portable_form();
-		$_POST   = $this->get_context_from_html( $this->render_form_html( $form_id ) );
-		$new_id  = self::factory()->post->create(
-			array(
-				'post_type'   => 'jetpack_form',
-				'post_status' => 'publish',
-			)
-		);
+		$form_id = $this->create_portable_form();
+		$new_id  = $this->create_portable_form();
+
+		$this->configure_portable_forms( array( $form_id, $new_id ) );
+		$_POST = $this->get_context_from_html( $this->render_form_html( $form_id ) );
 
 		update_option(
 			Settings::OPTION_NAME,
 			array_merge(
 				Settings::get_all(),
-				array( 'target_form_id' => $new_id )
+				array( 'target_form_ids' => array( $new_id ) )
 			)
 		);
 
 		$this->assertFalse( JetpackForms::is_target_submission() );
+
+		$_POST = $this->get_context_from_html( $this->render_form_html( $new_id ) );
+		$this->assertTrue( JetpackForms::is_target_submission() );
+	}
+
+	/**
+	 * A mapping-incompatible selected form retains routing but cannot subscribe.
+	 *
+	 * @return void
+	 */
+	public function test_mapping_incompatible_selected_form_retains_routing_without_subscription() {
+		$compatible_form_id   = $this->create_portable_form();
+		$incompatible_form_id = $this->create_portable_form( 'Different email', 'Different consent' );
+		$feedback_id          = self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		$success_page_id      = self::factory()->post->create(
+			array(
+				'post_type'   => 'page',
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->configure_portable_forms(
+			array( $compatible_form_id, $incompatible_form_id ),
+			array(
+				'success_page_id'           => $success_page_id,
+				'emailoctopus_list_id'      => 'newsletter-list',
+				'emailoctopus_email_source' => 'email',
+				'newsletter_source'         => 'join_our_newsletter',
+				'emailoctopus_field_map'    => array(),
+			)
+		);
+		update_option( 'emailoctopus_api_key', 'test-api-key' );
+
+		$_POST                              = $this->get_context_from_html( $this->render_form_html( $incompatible_form_id ) );
+		Feedback::$form_ids[ $feedback_id ] = $incompatible_form_id;
+		$request_count                      = 0;
+		$http_mock                          = static function ( $preempt ) use ( &$request_count ) {
+			++$request_count;
+			return $preempt;
+		};
+
+		add_filter( 'pre_http_request', $http_mock );
+		$this->run_subscription_callback( $feedback_id );
+		remove_filter( 'pre_http_request', $http_mock );
+
+		$this->assertTrue( JetpackForms::is_target_submission( $feedback_id ) );
+		$this->assertSame( 0, $request_count );
+		$this->assertSame( '', get_post_meta( $feedback_id, '_ran_emailoctopus_subscription_status', true ) );
+		$this->assertSame(
+			get_permalink( $success_page_id ),
+			JetpackForms::redirect_contact_form( 'https://example.org/original/', 123, $feedback_id )
+		);
 	}
 
 	/**
@@ -383,26 +513,52 @@ class RAN_EmailOctopus_Jetpack_Forms_Portable_Runtime_Test extends WP_UnitTestCa
 		 * @return int
 		 */
 	private function configure_portable_form() {
-		$form_id = self::factory()->post->create(
-			array(
-				'post_type'    => 'jetpack_form',
-				'post_status'  => 'publish',
-				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form"></div><!-- /wp:jetpack/contact-form -->',
-			)
-		);
+		$form_id = $this->create_portable_form();
+		$this->configure_portable_forms( array( $form_id ) );
+
+		return $form_id;
+	}
+
+	/**
+	 * Persist selected saved forms for the shared default profile.
+	 *
+	 * @param array<int,int>      $form_ids Selected form IDs.
+	 * @param array<string,mixed> $overrides Additional settings.
+	 * @return void
+	 */
+	private function configure_portable_forms( $form_ids, $overrides = array() ) {
 		update_option(
 			Settings::OPTION_NAME,
 			array_merge(
 				Settings::get_defaults(),
+				$overrides,
 				array(
-					'target_form_id' => $form_id,
+					'target_form_ids' => $form_ids,
 				)
 			)
 		);
 
 		$this->assertTrue( IntegrationResolver::is_portable_available() );
+	}
 
-		return $form_id;
+	/**
+	 * Create a structurally valid saved form with configurable shared fields.
+	 *
+	 * @param string $email_label      Email field label.
+	 * @param string $newsletter_label Newsletter field label.
+	 * @return int
+	 */
+	private function create_portable_form( $email_label = 'Email', $newsletter_label = 'Join our newsletter' ) {
+		$fields = '<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"' . esc_attr( $email_label ) . '"} /--></div><!-- /wp:jetpack/field-email -->'
+			. '<!-- wp:jetpack/field-checkbox --><div><!-- wp:jetpack/label {"label":"' . esc_attr( $newsletter_label ) . '"} /--></div><!-- /wp:jetpack/field-checkbox -->';
+
+		return self::factory()->post->create(
+			array(
+				'post_type'    => 'jetpack_form',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:jetpack/contact-form --><div class="wp-block-jetpack-contact-form">' . $fields . '</div><!-- /wp:jetpack/contact-form -->',
+			)
+		);
 	}
 
 		/**

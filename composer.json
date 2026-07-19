@@ -1,6 +1,6 @@
 {
 	"name": "rocketsarenostalgic/ran-emailoctopus-jetpack-forms",
-	"description": "EmailOctopus subscriptions from one selected saved Jetpack form.",
+	"description": "EmailOctopus subscriptions from selected compatible saved Jetpack forms.",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require": {

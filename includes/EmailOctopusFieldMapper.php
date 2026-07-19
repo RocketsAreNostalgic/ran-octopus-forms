@@ -44,12 +44,42 @@ final class EmailOctopusFieldMapper {
 	}
 
 	/**
-	 * Get Jetpack fields available on the configured saved form.
+	 * Get Jetpack fields shared by every structurally valid selected form.
 	 *
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_source_fields() {
-		return self::get_source_fields_for_saved_form( Settings::get_target_form_id() );
+		return self::get_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	}
+
+	/**
+	 * Build the detected field matrix for selected saved forms.
+	 *
+	 * Unavailable or structurally invalid selections remain represented with an
+	 * empty field list so diagnostics can retain their identity.
+	 *
+	 * @param array<int,int>|null $form_ids Saved form IDs, or the configured collection.
+	 * @return array<int,array<int,array<string,string>>>
+	 */
+	public static function get_source_field_matrix( $form_ids = null ) {
+		$form_ids = null === $form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $form_ids );
+		$matrix   = array();
+
+		foreach ( $form_ids as $form_id ) {
+			$matrix[ $form_id ] = self::get_source_fields_for_saved_form( $form_id );
+		}
+
+		return $matrix;
+	}
+
+	/**
+	 * Get unambiguous fields with the same key and exact type on every valid form.
+	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_source_fields_for_saved_forms( $form_ids ) {
+		return self::get_compatible_source_fields( $form_ids, array(), false );
 	}
 
 	/**
@@ -79,12 +109,17 @@ final class EmailOctopusFieldMapper {
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_newsletter_source_fields() {
-		return array_values(
-			array_filter(
-				self::get_source_fields(),
-				array( __CLASS__, 'is_supported_newsletter_source_field' )
-			)
-		);
+		return self::get_newsletter_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	}
+
+	/**
+	 * Get newsletter fields shared across forms as one consent-type family.
+	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_newsletter_source_fields_for_saved_forms( $form_ids ) {
+		return self::get_compatible_source_fields( $form_ids, self::NEWSLETTER_SOURCE_FIELD_TYPES, true );
 	}
 
 	/**
@@ -108,12 +143,17 @@ final class EmailOctopusFieldMapper {
 	 * @return array<int,array<string,string>>
 	 */
 	public static function get_email_source_fields() {
-		return array_values(
-			array_filter(
-				self::get_source_fields(),
-				array( __CLASS__, 'is_supported_email_source_field' )
-			)
-		);
+		return self::get_email_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	}
+
+	/**
+	 * Get email fields shared across all structurally valid selected forms.
+	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
+	 * @return array<int,array<string,string>>
+	 */
+	public static function get_email_source_fields_for_saved_forms( $form_ids ) {
+		return self::get_compatible_source_fields( $form_ids, self::EMAIL_SOURCE_FIELD_TYPES, false );
 	}
 
 	/**
@@ -149,6 +189,92 @@ final class EmailOctopusFieldMapper {
 	 */
 	public static function is_supported_email_source_field( $field ) {
 		return empty( $field['ambiguous'] ) && in_array( (string) ( $field['type'] ?? '' ), self::EMAIL_SOURCE_FIELD_TYPES, true );
+	}
+
+	/**
+	 * Report subscription compatibility independently for each selected form.
+	 *
+	 * @param array<int,int>|null      $form_ids      Saved form IDs, or the configured collection.
+	 * @param array<string,mixed>|null $configuration Settings being checked, or current settings.
+	 * @return array<int,array{eligible:bool,routing_reason:string,reasons:array<int,string>,source_failures:array<int,array{kind:string,tag:string,source:string,reason:string,expected_type:string,actual_type:string}>}>
+	 */
+	public static function get_subscription_compatibility( $form_ids = null, $configuration = null ) {
+		$form_ids      = null === $form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $form_ids );
+		$configuration = is_array( $configuration ) ? $configuration : IntegrationResolver::get_default_profile()->get_configuration();
+		$matrix        = self::get_source_field_matrix( $form_ids );
+		$email_source  = self::normalize_source_key( (string) ( $configuration['emailoctopus_email_source'] ?? '' ) );
+		$newsletter    = self::normalize_source_key( (string) ( $configuration['newsletter_source'] ?? '' ) );
+		$field_map     = is_array( $configuration['emailoctopus_field_map'] ?? null ) ? $configuration['emailoctopus_field_map'] : array();
+		$custom_types  = self::get_expected_custom_source_types( $form_ids, $matrix, $field_map );
+		$results       = array();
+
+		foreach ( $form_ids as $form_id ) {
+			$routing_reason = IntegrationResolver::get_target_form_reason( $form_id, $form_ids );
+			$failures       = array();
+			$reasons        = array();
+
+			if ( '' !== $routing_reason ) {
+				$reasons[] = 'routing_ineligible';
+			} else {
+				$email_failure = self::get_source_failure( $matrix[ $form_id ], 'email', '', $email_source, self::EMAIL_SOURCE_FIELD_TYPES, '' );
+
+				if ( null !== $email_failure ) {
+					$failures[] = $email_failure;
+					$reasons[]  = 'missing' === $email_failure['reason'] ? 'email_source_missing' : 'email_source_invalid';
+				}
+
+				$newsletter_failure = self::get_source_failure( $matrix[ $form_id ], 'newsletter', '', $newsletter, self::NEWSLETTER_SOURCE_FIELD_TYPES, '' );
+
+				if ( null !== $newsletter_failure ) {
+					$failures[] = $newsletter_failure;
+					$reasons[]  = 'missing' === $newsletter_failure['reason'] ? 'newsletter_source_missing' : 'newsletter_source_invalid';
+				}
+
+				foreach ( $field_map as $tag => $mapping ) {
+					if ( ! is_array( $mapping ) ) {
+						continue;
+					}
+
+					$source = self::normalize_source_key( (string) ( $mapping['source'] ?? '' ) );
+
+					if ( '' === $source ) {
+						continue;
+					}
+
+					$expected_type = (string) ( $custom_types[ $source ] ?? '' );
+					$failure       = self::get_source_failure( $matrix[ $form_id ], 'custom', sanitize_text_field( (string) $tag ), $source, array(), $expected_type );
+
+					if ( null === $failure ) {
+						continue;
+					}
+
+					$failures[] = $failure;
+					$reasons[]  = 'missing' === $failure['reason'] ? 'custom_source_missing' : ( 'type_mismatch' === $failure['reason'] ? 'custom_source_type_mismatch' : 'custom_source_invalid' );
+				}
+			}
+
+			$results[ $form_id ] = array(
+				'eligible'        => '' === $routing_reason && empty( $failures ),
+				'routing_reason'  => $routing_reason,
+				'reasons'         => array_values( array_unique( $reasons ) ),
+				'source_failures' => $failures,
+			);
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Whether one selected form has every configured subscription source.
+	 *
+	 * @param int $form_id Saved Jetpack form ID.
+	 * @return bool
+	 */
+	public static function is_subscription_compatible_form_id( $form_id ) {
+		$form_id = absint( $form_id );
+		$results = self::get_subscription_compatibility();
+
+		return ! empty( $results[ $form_id ]['eligible'] );
 	}
 
 	/**
@@ -276,6 +402,177 @@ final class EmailOctopusFieldMapper {
 		$value = is_string( $value ) ? trim( $value, '_' ) : '';
 
 		return $value;
+	}
+
+	/**
+	 * Intersect compatible fields across structurally valid selected forms.
+	 *
+	 * @param array<int,int>    $form_ids     Saved form IDs.
+	 * @param array<int,string> $allowed_types Optional supported field types.
+	 * @param bool              $type_family  Whether allowed types are interchangeable.
+	 * @return array<int,array<string,string>>
+	 */
+	private static function get_compatible_source_fields( $form_ids, $allowed_types, $type_family ) {
+		$form_ids = Settings::normalize_target_form_ids( $form_ids );
+		$form_ids = array_values(
+			array_filter(
+				$form_ids,
+				static function ( $form_id ) {
+					return Settings::is_valid_published_saved_form( $form_id ) && Settings::has_valid_saved_form_structure( $form_id );
+				}
+			)
+		);
+
+		if ( empty( $form_ids ) ) {
+			return array();
+		}
+
+		$matrix     = self::get_source_field_matrix( $form_ids );
+		$candidates = self::index_unambiguous_fields( $matrix[ $form_ids[0] ] );
+
+		foreach ( $candidates as $key => $field ) {
+			if ( ! empty( $allowed_types ) && ! in_array( (string) ( $field['type'] ?? '' ), $allowed_types, true ) ) {
+				unset( $candidates[ $key ] );
+			}
+		}
+
+		foreach ( array_slice( $form_ids, 1 ) as $form_id ) {
+			$fields = self::index_unambiguous_fields( $matrix[ $form_id ] );
+
+			foreach ( $candidates as $key => $candidate ) {
+				if ( ! isset( $fields[ $key ] ) ) {
+					unset( $candidates[ $key ] );
+					continue;
+				}
+
+				$type = (string) ( $fields[ $key ]['type'] ?? '' );
+
+				if ( ! empty( $allowed_types ) && ! in_array( $type, $allowed_types, true ) ) {
+					unset( $candidates[ $key ] );
+					continue;
+				}
+
+				if ( ! $type_family && (string) ( $candidate['type'] ?? '' ) !== $type ) {
+					unset( $candidates[ $key ] );
+				}
+			}
+		}
+
+		return array_values( $candidates );
+	}
+
+	/**
+	 * Index unambiguous fields by normalized source key.
+	 *
+	 * @param array<int,array<string,string>> $fields Detected fields.
+	 * @return array<string,array<string,string>>
+	 */
+	private static function index_unambiguous_fields( $fields ) {
+		$indexed = array();
+
+		foreach ( $fields as $field ) {
+			$key = (string) ( $field['key'] ?? '' );
+
+			if ( '' !== $key && empty( $field['ambiguous'] ) ) {
+				$indexed[ $key ] = $field;
+			}
+		}
+
+		return $indexed;
+	}
+
+	/**
+	 * Determine each configured custom source's canonical type.
+	 *
+	 * The earliest routing-eligible selected form that contains an unambiguous
+	 * source establishes its type. This preserves the migrated primary form while
+	 * isolating later selections that reuse the key with another Jetpack type.
+	 *
+	 * @param array<int,int>                              $form_ids Saved form IDs.
+	 * @param array<int,array<int,array<string,string>>> $matrix   Detected fields by form.
+	 * @param array<string,mixed>                         $field_map Configured mappings.
+	 * @return array<string,string>
+	 */
+	private static function get_expected_custom_source_types( $form_ids, $matrix, $field_map ) {
+		$expected = array();
+
+		foreach ( $field_map as $mapping ) {
+			if ( ! is_array( $mapping ) ) {
+				continue;
+			}
+
+			$source = self::normalize_source_key( (string) ( $mapping['source'] ?? '' ) );
+
+			if ( '' === $source || isset( $expected[ $source ] ) ) {
+				continue;
+			}
+
+			foreach ( $form_ids as $form_id ) {
+				if ( '' !== IntegrationResolver::get_target_form_reason( $form_id, $form_ids ) ) {
+					continue;
+				}
+
+				$fields = self::index_unambiguous_fields( $matrix[ $form_id ] ?? array() );
+
+				if ( isset( $fields[ $source ] ) ) {
+					$expected[ $source ] = (string) ( $fields[ $source ]['type'] ?? '' );
+					break;
+				}
+			}
+		}
+
+		return $expected;
+	}
+
+	/**
+	 * Describe why one configured source is incompatible with a form.
+	 *
+	 * @param array<int,array<string,string>> $fields        Detected form fields.
+	 * @param string                          $kind          Source role.
+	 * @param string                          $tag           EmailOctopus custom tag.
+	 * @param string                          $source        Normalized source key.
+	 * @param array<int,string>               $allowed_types Supported type family.
+	 * @param string                          $expected_type Canonical custom type.
+	 * @return array{kind:string,tag:string,source:string,reason:string,expected_type:string,actual_type:string}|null
+	 */
+	private static function get_source_failure( $fields, $kind, $tag, $source, $allowed_types, $expected_type ) {
+		$indexed        = array();
+		$expected_label = '' !== $expected_type ? $expected_type : implode( '|', $allowed_types );
+
+		foreach ( $fields as $field ) {
+			$key = (string) ( $field['key'] ?? '' );
+
+			if ( '' !== $key ) {
+				$indexed[ $key ] = $field;
+			}
+		}
+
+		if ( '' === $source || ! isset( $indexed[ $source ] ) ) {
+			$reason      = 'missing';
+			$actual_type = '';
+		} else {
+			$field       = $indexed[ $source ];
+			$actual_type = (string) ( $field['type'] ?? '' );
+
+			if ( ! empty( $field['ambiguous'] ) ) {
+				$reason = 'ambiguous';
+			} elseif ( ! empty( $allowed_types ) && ! in_array( $actual_type, $allowed_types, true ) ) {
+				$reason = 'wrong_type';
+			} elseif ( '' !== $expected_type && $actual_type !== $expected_type ) {
+				$reason = 'type_mismatch';
+			} else {
+				return null;
+			}
+		}
+
+		return array(
+			'kind'          => $kind,
+			'tag'           => $tag,
+			'source'        => $source,
+			'reason'        => $reason,
+			'expected_type' => $expected_label,
+			'actual_type'   => $actual_type,
+		);
 	}
 
 	/**

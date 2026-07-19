@@ -16,7 +16,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class IntegrationResolver {
 	/**
-	 * Option 1's one internal profile identifier.
+	 * One internal profile identifier.
 	 */
 	const DEFAULT_PROFILE_ID = 'default';
 
@@ -31,12 +31,9 @@ final class IntegrationResolver {
 	 * @return IntegrationProfile
 	 */
 	public static function get_default_profile() {
-		$target_form_id = Settings::get_target_form_id();
-		$form_ids       = 0 < $target_form_id ? array( $target_form_id ) : array();
-
 		return new IntegrationProfile(
 			self::DEFAULT_PROFILE_ID,
-			$form_ids,
+			Settings::get_target_form_ids(),
 			array(
 				'success_url'                     => Settings::get_success_url(),
 				'emailoctopus_form_id'            => Settings::get_emailoctopus_form_id(),
@@ -112,10 +109,38 @@ final class IntegrationResolver {
 			return 'feedback_identity_unavailable';
 		}
 
-		$form_id = Settings::get_target_form_id();
+		$form_ids = Settings::get_target_form_ids();
 
-		if ( 0 >= $form_id ) {
+		if ( empty( $form_ids ) ) {
 			return 'target_not_selected';
+		}
+
+		foreach ( $form_ids as $form_id ) {
+			if ( '' === self::get_target_form_reason( $form_id ) ) {
+				return '';
+			}
+		}
+
+		return self::get_target_form_reason( $form_ids[0] );
+	}
+
+	/**
+	 * Get the routing availability reason for one selected saved form.
+	 *
+	 * @param int                 $form_id           Saved Jetpack form ID.
+	 * @param array<int,int>|null $selected_form_ids Optional collection being validated before save.
+	 * @return string Empty when this form is routing eligible.
+	 */
+	public static function get_target_form_reason( $form_id, $selected_form_ids = null ) {
+		$form_id           = absint( $form_id );
+		$selected_form_ids = null === $selected_form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $selected_form_ids );
+
+		if ( ! in_array( $form_id, $selected_form_ids, true ) ) {
+			return 'target_not_selected';
+		}
+
+		if ( ! self::supports_portable_forms() ) {
+			return 'feedback_identity_unavailable';
 		}
 
 		$form = get_post( $form_id );
@@ -140,21 +165,31 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Get the selected target form ID, valid or otherwise.
+	 * Get all selected saved-form IDs, valid or otherwise.
 	 *
-	 * @return int
+	 * @return array<int,int>
 	 */
-	public static function get_target_form_id() {
-		return Settings::get_target_form_id();
+	public static function get_target_form_ids() {
+		return Settings::get_target_form_ids();
 	}
 
 	/**
-	 * Whether a saved form belongs to the active portable profile.
+	 * Whether one selected saved form can receive signed integration routing.
 	 *
 	 * @param int $form_id Saved Jetpack form ID.
 	 * @return bool
 	 */
-	public static function is_target_form_id( $form_id ) {
-		return self::is_portable_available() && absint( $form_id ) === self::get_target_form_id();
+	public static function is_routing_eligible_form_id( $form_id ) {
+		return '' === self::get_target_form_reason( $form_id );
+	}
+
+	/**
+	 * Whether one routed form has every source required for subscription.
+	 *
+	 * @param int $form_id Saved Jetpack form ID.
+	 * @return bool
+	 */
+	public static function is_subscription_eligible_form_id( $form_id ) {
+		return self::is_routing_eligible_form_id( $form_id ) && EmailOctopusFieldMapper::is_subscription_compatible_form_id( $form_id );
 	}
 }

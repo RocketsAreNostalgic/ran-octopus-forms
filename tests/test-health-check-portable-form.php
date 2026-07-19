@@ -44,14 +44,15 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 
 		update_option(
 			Settings::OPTION_NAME,
-			array_merge( Settings::get_defaults(), array( 'target_form_id' => $form_id ) )
+			array_merge( Settings::get_defaults(), array( 'target_form_ids' => array( $form_id ) ) )
 		);
 
 		$rows = $this->invoke_health_method( 'check_integration_target' );
+		$row  = $this->find_row( $rows, 'Saved Jetpack form #' . $form_id );
 
-		$this->assertSame( 'error', $rows[0]['status'] );
-		$this->assertStringContainsString( $expected_message, $rows[0]['message'] );
-		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $rows[0]['message'] );
+		$this->assertSame( 'error', $row['status'] );
+		$this->assertStringContainsString( $expected_message, $row['message'] );
+		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $row['message'] );
 	}
 
 	/**
@@ -79,7 +80,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'            => $form_id,
+					'target_form_ids'           => array( $form_id ),
 					'emailoctopus_email_source' => 'portable_email',
 					'newsletter_source'         => 'portable_opt_in',
 				)
@@ -94,8 +95,10 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 		$this->assertStringContainsString( 'Portable email', $email_check['message'] );
 		$this->assertSame( 'pass', $newsletter_check['status'] );
 		$this->assertStringContainsString( 'Portable opt-in', $newsletter_check['message'] );
-		$this->assertSame( 'pass', $target_checks[0]['status'] );
-		$this->assertStringContainsString( 'Saved-form routing is active', $target_checks[0]['message'] );
+		$routing_check = $this->find_row( $target_checks, 'Saved-form routing' );
+
+		$this->assertSame( 'pass', $routing_check['status'] );
+		$this->assertStringContainsString( '1 of 1 selected saved form(s) can be routed', $routing_check['message'] );
 	}
 
 	/**
@@ -110,10 +113,78 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 		$form_rows   = $this->invoke_health_method( 'check_contact_form' );
 
 		$this->assertSame( 'error', $target_rows[0]['status'] );
-		$this->assertStringContainsString( 'No saved form is selected', $target_rows[0]['message'] );
+		$this->assertStringContainsString( 'No saved forms are selected', $target_rows[0]['message'] );
 		$this->assertStringContainsString( 'routing remains disabled', $target_rows[0]['message'] );
 		$this->assertSame( 'skipped', $form_rows[0]['status'] );
 		$this->assertStringContainsString( 'EmailOctopus routing is disabled', $form_rows[0]['message'] );
+	}
+
+	/**
+	 * An invalid selected form is isolated while a valid peer remains active.
+	 *
+	 * @return void
+	 */
+	public function test_invalid_form_is_degraded_without_disabling_valid_peer() {
+		$valid_form_id = $this->create_saved_form( 'publish', true );
+		$draft_form_id = $this->create_saved_form( 'draft', true );
+
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge( Settings::get_defaults(), array( 'target_form_ids' => array( $valid_form_id, $draft_form_id ) ) )
+		);
+
+		$rows        = $this->invoke_health_method( 'check_integration_target' );
+		$routing_row = $this->find_row( $rows, 'Saved-form routing' );
+		$invalid_row = $this->find_row( $rows, 'Saved Jetpack form #' . $draft_form_id );
+		$valid_row   = $this->find_row( $rows, 'Saved Jetpack form #' . $valid_form_id );
+
+		$this->assertSame( 'warning', $routing_row['status'] );
+		$this->assertStringContainsString( '1 of 2', $routing_row['message'] );
+		$this->assertSame( 'warning', $invalid_row['status'] );
+		$this->assertStringContainsString( 'valid selected peers remain active', $invalid_row['message'] );
+		$this->assertSame( 'pass', $valid_row['status'] );
+	}
+
+	/**
+	 * Mapping incompatibility is degraded when one selected peer remains eligible.
+	 *
+	 * @return void
+	 */
+	public function test_mapping_incompatibility_reports_warning_with_eligible_peer() {
+		$valid_form_id        = $this->create_saved_form( 'publish', true );
+		$incompatible_form_id = self::factory()->post->create(
+			array(
+				'post_type'    => 'jetpack_form',
+				'post_status'  => 'publish',
+				'post_content' => '<!-- wp:jetpack/contact-form --><div>'
+					. '<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Work email"} /--></div><!-- /wp:jetpack/field-email -->'
+					. '<!-- wp:jetpack/field-consent --><div><!-- wp:jetpack/label {"label":"Work opt-in"} /--></div><!-- /wp:jetpack/field-consent -->'
+					. '</div><!-- /wp:jetpack/contact-form -->',
+			)
+		);
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge(
+				Settings::get_defaults(),
+				array(
+					'target_form_ids'           => array( $valid_form_id, $incompatible_form_id ),
+					'emailoctopus_email_source' => 'portable_email',
+					'newsletter_source'         => 'portable_opt_in',
+				)
+			)
+		);
+
+		$rows = $this->invoke_health_method( 'check_contact_form' );
+
+		$this->assertSame( 'warning', $this->find_row( $rows, 'Shared saved-form fields' )['status'] );
+		$this->assertSame( 'warning', $this->find_row( $rows, 'Shared email fields' )['status'] );
+		$this->assertSame( 'warning', $this->find_row( $rows, 'Email source mapping' )['status'] );
+		$this->assertSame( 'pass', $this->find_row( $rows, 'Subscription mapping for form #' . $valid_form_id )['status'] );
+		$this->assertSame( 'warning', $this->find_row( $rows, 'Subscription mapping for form #' . $incompatible_form_id )['status'] );
+
+		foreach ( $rows as $row ) {
+			$this->assertNotSame( 'error', $row['status'] );
+		}
 	}
 
 	/**
@@ -130,6 +201,23 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Portable_Form_Test extends WP_
 		}
 
 		return $method->invoke( null );
+	}
+
+	/**
+	 * Find a diagnostic row by label.
+	 *
+	 * @param array<int,array<string,string>> $rows  Health rows.
+	 * @param string                          $label Expected label.
+	 * @return array<string,string>
+	 */
+	private function find_row( $rows, $label ) {
+		foreach ( $rows as $row ) {
+			if ( $label === $row['label'] ) {
+				return $row;
+			}
+		}
+
+		$this->fail( 'Health row not found: ' . $label );
 	}
 
 	/**

@@ -38,7 +38,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 		$check = $this->get_email_source_mapping_check();
 
 		$this->assertSame( 'error', $check['status'] );
-		$this->assertStringContainsString( 'is not an email field', $check['message'] );
+		$this->assertStringContainsString( 'type-incompatible', $check['message'] );
 	}
 
 	/**
@@ -83,7 +83,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Health_Check_Email_Source_Test extends WP_U
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'            => $target_form_id,
+					'target_form_ids'           => array( $target_form_id ),
 					'emailoctopus_email_source' => $source_key,
 				)
 			)

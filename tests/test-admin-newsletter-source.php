@@ -43,7 +43,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'    => $target_form_id,
+					'target_form_ids'   => array( $target_form_id ),
 					'newsletter_source' => 'checkbox_opt_in',
 				)
 			)
@@ -91,7 +91,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'            => $target_form_id,
+					'target_form_ids'           => array( $target_form_id ),
 					'emailoctopus_email_source' => '',
 					'newsletter_source'         => '',
 				)
@@ -139,7 +139,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id'            => $target_form_id,
+					'target_form_ids'           => array( $target_form_id ),
 					'emailoctopus_email_source' => '',
 					'newsletter_source'         => '',
 				)
@@ -157,7 +157,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	}
 
 	/**
-	 * A stale saved source preselects the sole current candidate without saving it.
+	 * A stale saved source is preserved until an administrator replaces it.
 	 *
 	 * @dataProvider stale_source_provider
 	 *
@@ -167,7 +167,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 	 * @param string $replacement      Expected current candidate key.
 	 * @return void
 	 */
-	public function test_stale_saved_source_preselects_the_sole_current_candidate_with_an_adjacent_warning( $select_id, $setting_key, $source, $replacement ) {
+	public function test_stale_saved_source_is_preserved_with_an_adjacent_warning( $select_id, $setting_key, $source, $replacement ) {
 		$target_form_id = $this->create_saved_form(
 			'<!-- wp:jetpack/field-email -->
 <div><!-- wp:jetpack/label {"label":"Email address"} /--></div>
@@ -183,8 +183,8 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 			array_merge(
 				Settings::get_defaults(),
 				array(
-					'target_form_id' => $target_form_id,
-					$setting_key     => $source,
+					'target_form_ids' => array( $target_form_id ),
+					$setting_key      => $source,
 				)
 			)
 		);
@@ -194,12 +194,85 @@ class RAN_EmailOctopus_Jetpack_Forms_Admin_Newsletter_Source_Test extends WP_Uni
 		$source_field  = $this->get_source_field_markup( $markup, $select_id );
 
 		$this->assertMatchesRegularExpression(
-			'#<option value="' . preg_quote( $replacement, '#' ) . '"[^>]*selected[^>]*>#',
+			'#<option value="' . preg_quote( $source, '#' ) . '"[^>]*selected[^>]*>#',
 			$source_select
 		);
-		$this->assertStringNotContainsString( 'value="' . $source . '"', $source_select );
+		$this->assertStringContainsString( 'value="' . $replacement . '"', $source_select );
 		$this->assertStringContainsString( str_replace( '_', ' ', $source ), $source_field );
-		$this->assertStringContainsString( 'save settings to confirm this replacement', $source_field );
+		$this->assertStringContainsString( 'preserved until you deliberately choose', $source_field );
+	}
+
+	/**
+	 * Stored custom mappings remain visible when selected forms share no fields.
+	 *
+	 * @return void
+	 */
+	public function test_stale_custom_mapping_remains_visible_without_shared_candidates() {
+		$first_form_id  = $this->create_saved_form(
+			'<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Email"} /--></div><!-- /wp:jetpack/field-email -->'
+			. '<!-- wp:jetpack/field-checkbox --><div><!-- wp:jetpack/option {"label":"Newsletter"} /--></div><!-- /wp:jetpack/field-checkbox -->'
+			. '<!-- wp:jetpack/field-text --><div><!-- wp:jetpack/label {"label":"Name"} /--></div><!-- /wp:jetpack/field-text -->'
+		);
+		$second_form_id = $this->create_saved_form(
+			'<!-- wp:jetpack/field-email --><div><!-- wp:jetpack/label {"label":"Work email"} /--></div><!-- /wp:jetpack/field-email -->'
+			. '<!-- wp:jetpack/field-consent --><div><!-- wp:jetpack/label {"label":"Work newsletter"} /--></div><!-- /wp:jetpack/field-consent -->'
+			. '<!-- wp:jetpack/field-text --><div><!-- wp:jetpack/label {"label":"Full name"} /--></div><!-- /wp:jetpack/field-text -->'
+		);
+		update_option( 'emailoctopus_api_key', 'admin-field-map-test' );
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge(
+				Settings::get_defaults(),
+				array(
+					'target_form_ids'           => array( $first_form_id, $second_form_id ),
+					'emailoctopus_list_id'      => 'newsletter-list',
+					'emailoctopus_email_source' => 'email',
+					'newsletter_source'         => 'newsletter',
+					'emailoctopus_field_map'    => array(
+						'FirstName' => array(
+							'source'    => 'name',
+							'transform' => 'as_is',
+						),
+					),
+				)
+			)
+		);
+		$http_mock = static function ( $preempt, $args, $url ) {
+			unset( $preempt, $args );
+
+			$body = false !== strpos( $url, '/lists/newsletter-list' )
+				? array(
+					'name'   => 'Newsletter',
+					'fields' => array(
+						array( 'tag' => 'EmailAddress' ),
+						array(
+							'tag'   => 'FirstName',
+							'label' => 'First name',
+							'type'  => 'TEXT',
+						),
+					),
+				)
+				: array( 'data' => array() );
+
+			return array(
+				'headers'  => array(),
+				'body'     => wp_json_encode( $body ),
+				'response' => array(
+					'code'    => 200,
+					'message' => 'OK',
+				),
+				'cookies'  => array(),
+				'filename' => null,
+			);
+		};
+
+		add_filter( 'pre_http_request', $http_mock, 10, 3 );
+		$markup = $this->render_settings_page();
+		remove_filter( 'pre_http_request', $http_mock, 10 );
+
+		$this->assertStringContainsString( 'name="ran_emailoctopus_jetpack_forms_settings[emailoctopus_field_map][FirstName][preserve_source]" value="name"', $markup );
+		$this->assertStringContainsString( 'unavailable or type-incompatible on saved form(s) ' . $second_form_id, $markup );
+		$this->assertStringContainsString( 'No unambiguous, type-compatible Jetpack fields are shared', $markup );
 	}
 
 	/**

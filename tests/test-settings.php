@@ -8,7 +8,7 @@
 use RAN\EmailOctopusJetpackForms\Settings;
 
 /**
- * Ensure settings require one saved Jetpack form and retain public history.
+ * Ensure settings store a canonical saved Jetpack form collection.
  */
 class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	/**
@@ -31,9 +31,53 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_new_install_has_no_target_or_success_url_default() {
-		$this->assertSame( 0, Settings::get_target_form_id() );
+		$this->assertSame( array(), Settings::get_target_form_ids() );
 		$this->assertSame( '', Settings::get_success_url() );
 		$this->assertArrayNotHasKey( 'contact_page_id', Settings::get_all() );
+	}
+
+	/**
+	 * The Option 1 scalar migrates once and is removed from storage.
+	 *
+	 * @return void
+	 */
+	public function test_scalar_target_migrates_once_to_collection_and_is_removed() {
+		update_option(
+			Settings::OPTION_NAME,
+			array(
+				'target_form_id'         => 6243,
+				'emailoctopus_list_id'   => 'newsletter-list',
+				'emailoctopus_form_id'   => '',
+				'emailoctopus_field_map' => array(),
+				'newsletter_source'      => '',
+				'success_page_id'        => 0,
+			)
+		);
+
+		$this->assertSame( array( 6243 ), Settings::get_target_form_ids() );
+
+		$stored = get_option( Settings::OPTION_NAME );
+		$this->assertSame( array( 6243 ), $stored['target_form_ids'] );
+		$this->assertArrayNotHasKey( 'target_form_id', $stored );
+
+		$stored['target_form_ids'] = array( 7002, 7001 );
+		$stored['target_form_id']  = 9999;
+		update_option( Settings::OPTION_NAME, $stored );
+
+		$this->assertSame( array( 7001, 7002 ), Settings::get_target_form_ids() );
+		$this->assertArrayNotHasKey( 'target_form_id', get_option( Settings::OPTION_NAME ) );
+	}
+
+	/**
+	 * Collections normalize to unique ascending positive integer IDs.
+	 *
+	 * @return void
+	 */
+	public function test_target_collection_normalizes_deduplicates_and_sorts() {
+		$this->assertSame(
+			array( 3, 8, 12 ),
+			Settings::normalize_target_form_ids( array( '12', 3, 8, '003', 12, 0, -2, '1.5', 'no', true, null ) )
+		);
 	}
 
 	/**
@@ -116,9 +160,28 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 		$settings = Settings::sanitize( Settings::get_defaults() );
 		$errors   = get_settings_errors( Settings::OPTION_NAME );
 
-		$this->assertSame( 0, $settings['target_form_id'] );
+		$this->assertSame( array(), $settings['target_form_ids'] );
 		$this->assertSame( 'ran_emailoctopus_target_required', $errors[0]['code'] );
 		$this->assertSame( 'error', $errors[0]['type'] );
+	}
+
+	/**
+	 * The hidden zero emitted by the checkbox list permits intentional clear-all.
+	 *
+	 * @return void
+	 */
+	public function test_sanitize_can_clear_all_selected_forms() {
+		$form_id = $this->create_saved_form();
+		update_option(
+			Settings::OPTION_NAME,
+			array_merge( Settings::get_defaults(), array( 'target_form_ids' => array( $form_id ) ) )
+		);
+
+		$settings = Settings::sanitize( array( 'target_form_ids' => array( '0' ) ) );
+		$errors   = get_settings_errors( Settings::OPTION_NAME );
+
+		$this->assertSame( array(), $settings['target_form_ids'] );
+		$this->assertSame( 'ran_emailoctopus_target_required', $errors[0]['code'] );
 	}
 
 	/**
@@ -127,12 +190,12 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_sanitize_retains_an_invalid_target_for_diagnostics() {
-		$input                   = Settings::get_defaults();
-		$input['target_form_id'] = 999999;
-		$settings                = Settings::sanitize( $input );
-		$errors                  = get_settings_errors( Settings::OPTION_NAME );
+		$input                    = Settings::get_defaults();
+		$input['target_form_ids'] = array( 999999 );
+		$settings                 = Settings::sanitize( $input );
+		$errors                   = get_settings_errors( Settings::OPTION_NAME );
 
-		$this->assertSame( 999999, $settings['target_form_id'] );
+		$this->assertSame( array( 999999 ), $settings['target_form_ids'] );
 		$this->assertSame( 'ran_emailoctopus_target_invalid', $errors[0]['code'] );
 		$this->assertSame( 'error', $errors[0]['type'] );
 	}
@@ -209,7 +272,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Settings_Test extends WP_UnitTestCase {
 		return array_merge(
 			Settings::get_defaults(),
 			array(
-				'target_form_id'            => $form_id,
+				'target_form_ids'           => array( $form_id ),
 				'emailoctopus_destination'  => 'list:newsletter-list',
 				'emailoctopus_email_source' => 'email',
 				'newsletter_source'         => $newsletter_source,
