@@ -1,174 +1,84 @@
 # Roadmap
 
-This roadmap records the path from route-portable saved-form targeting to
-multiple independent EmailOctopus integrations. It is a planning document
-rather than a commitment to deliver every option.
+This roadmap records the completed progression from portable saved-form
+targeting to independent EmailOctopus integrations. It is a repository planning
+document and is not included in release archives.
 
-## Current baseline
+## Current baseline: Option 3
 
-The implemented Option 2 baseline stores one integration configuration
-containing:
+Option 3 is the implemented 2.0 baseline. The canonical settings option contains
+revisioned profiles keyed by immutable UUIDs. Each profile contains:
 
-- an explicitly selected collection of saved Jetpack forms and one success
-  page;
-- one EmailOctopus form or list destination;
-- one email source, newsletter consent source, and custom-field map; and
-- one set of visitor-facing subscription outcome messages.
+- an editable label and one or more exclusively assigned saved Jetpack forms;
+- an optional EmailOctopus form or list destination;
+- explicit email and consent sources plus custom mappings and transforms;
+- one success page; and
+- pending, subscribed, existing-address, and failure messages.
 
-Each selected saved form is an integration identity wherever it is embedded.
-Runtime routing signs that exact identity and verifies it against Jetpack's
-authoritative feedback metadata. Invalid or mapping-incompatible selections
-are isolated without disabling valid peers. There is no contact-page selector
-or page-scoped fallback.
+Several compatible forms may share a profile. Forms that need different
+destinations, mappings, success pages, or messages use separate profiles. A
+saved form can belong to only one profile, and corrupt duplicate ownership fails
+closed for that form without disabling unrelated profiles.
 
-Routes should not become permanent form identifiers. Permalinks can change,
-and a saved Jetpack form can be embedded in more than one place. Future work
-should identify the saved form or an explicit integration marker and carry a
-signed identifier through submission handling.
+The server-rendered administration interface uses an integrations index and a
+two-stage editor. Stage one owns identity, form assignment, and destination;
+stage two owns fields, mappings, success page, and messages. Profile-specific
+save handlers, a short database write lock, and profile revisions prevent
+cross-profile clobbering and reject stale same-profile tabs.
 
-## Option 1: One saved form on multiple routes
+Runtime routing signs the immutable profile UUID and exact saved-form reference,
+then verifies them against Jetpack's authoritative feedback identity. Outcome
+tokens carry the profile, and the canonical generic shortcode resolves that
+profile's message only on its configured success page.
 
-Implementation is now governed by
-[`OPTION-1-IMPLEMENTATION.md`](OPTION-1-IMPLEMENTATION.md), which records the
-locked contract, Dex tasks, compatibility gates, and acceptance criteria.
+Implementation and acceptance evidence is governed by
+[`OPTION-3-IMPLEMENTATION.md`](OPTION-3-IMPLEMENTATION.md).
 
-Allow one configured reusable Jetpack form to use the existing EmailOctopus
-configuration wherever that form is embedded.
+## Completed foundation: Option 1
 
-### Intended behaviour
+Option 1 made one saved Jetpack form portable across routes. It established the
+authoritative saved-form identity requirement, signed exact-form context,
+route-independent redirects, and native handling for unrelated forms.
 
-- Select or resolve one saved Jetpack form as the integration target.
-- Recognise that form on pages, posts, patterns, and other singular routes.
-- Add a signed hidden marker to every rendered instance.
-- Keep the existing EmailOctopus destination, field mapping, success page,
-  messages, and settings option.
-- Leave unrelated Jetpack forms untouched.
+Its locked plan and historical evidence remain in
+[`OPTION-1-IMPLEMENTATION.md`](OPTION-1-IMPLEMENTATION.md).
 
-### Implemented work
+## Completed foundation: Option 2
 
-- Decoupled render and submission checks from any embedding page.
-- Bound signed context to the selected saved-form target and default profile.
-- Read mapping candidates directly from the saved Jetpack form.
-- Generalised success-result checks beyond `is_page()`.
-- Updated health checks and added route, post, tampering, and regression tests.
-- Preserve unrelated public extension contracts.
+Option 2 extended the internal collection to several compatible saved forms
+sharing one configuration. It established field-intersection discovery,
+per-form mapping compatibility, isolation of malformed forms, and multiple
+participating forms on one route.
 
-### Limitation
+Its locked plan and historical evidence remain in
+[`OPTION-2-IMPLEMENTATION.md`](OPTION-2-IMPLEMENTATION.md).
 
-Every embedding is the same saved form and therefore uses the same fields and
-EmailOctopus configuration.
+## Version 2 compatibility policy
 
-## Option 2: Several compatible forms sharing one configuration
+Option 3 is a deliberate clean break. It does not migrate or dual-read the
+Option 1 or Option 2 shared settings schema. It does not infer targets from
+pages, scan or rewrite content, create a default profile, or retain legacy page
+selectors, shortcodes, filter aliases, constants, prefixes, and global getters.
 
-Implementation is governed by
-[`OPTION-2-IMPLEMENTATION.md`](OPTION-2-IMPLEMENTATION.md), which records the
-locked collection, compatibility, isolation, security, and acceptance contract.
+The retained public surface is intentionally small:
 
-Allow several explicitly selected saved Jetpack forms to use one shared
-EmailOctopus destination and field map.
+- the canonical subscription-message shortcode;
+- six canonical configuration filters, each receiving the effective value and
+  immutable profile UUID; and
+- native Jetpack behaviour for unassigned, invalid, spam, and trash feedback.
 
-### Intended behaviour
+## Future candidates
 
-- Any deliberately selected published saved form can participate, regardless
-  of its embedding route.
-- Multiple participating forms may appear on the same page.
-- Automatically signed form context distinguishes participating forms from
-  neighbouring Jetpack forms.
-- The existing destination, mappings, success page, and messages remain
-  global.
+Further work should be justified by real integrations rather than compatibility
+with unreleased schemas. Potential candidates include:
 
-### Implemented work
+- client-side field-choice refresh while retaining the same revision and lock
+  save contract;
+- profile duplication for administrators configuring similar forms;
+- import/export with explicit schema validation and ownership-conflict review;
+- richer transforms backed by concrete EmailOctopus mapping requirements; and
+- optional form search or pagination if the saved-form list becomes unwieldy.
 
-- Replaced the scalar target with an explicitly selected saved-form collection.
-- Resolved each submitted target from the existing signed saved-form context.
-- Built shared mapping candidates from the compatible intersection of selected
-  saved-form definitions.
-- Validated the shared email, consent, and custom-field mappings against every
-  participating form.
-- Reported health-check results per participating form.
-- Covered multiple routes, multiple forms on one page, sibling unselected forms,
-  stale mappings, and invalid markers in integration tests.
-
-### Complexity
-
-Low to medium. Approximately one to two focused development days.
-
-### Limitation
-
-All participating forms must expose compatible normalized field keys. For
-example, every form must contain the configured email and newsletter-consent
-sources. Forms with different fields or destinations need Option 3.
-
-## Option 3: Independent integration profiles
-
-Implementation is governed by
-[`OPTION-3-IMPLEMENTATION.md`](OPTION-3-IMPLEMENTATION.md), which records the
-clean 2.0.0 schema cutover, conflict-safe write contract, Dex tasks,
-orchestration boundaries, and acceptance gates.
-
-Create a genuine multi-integration model in which each Jetpack form can have
-its own EmailOctopus behaviour.
-
-Each profile would contain:
-
-- a stable profile identifier;
-- the source post and explicitly selected or marked Jetpack form;
-- an EmailOctopus form or list destination;
-- email and newsletter-consent sources;
-- custom-field mappings and transforms;
-- a success destination; and
-- visitor-facing outcome messages.
-
-### Likely work
-
-- Replace the flat settings record with an array of integration profiles.
-- Add an integrations index and add/edit/delete administration flow.
-- Bind the profile ID and submitted form identity into the signed marker.
-- Make the field mapper, subscriber, redirects, outcome tokens, and health
-  checks resolve a profile rather than global getters.
-- Migrate the current configuration into the first profile without deleting
-  rollback data.
-- Preserve the existing marker as the default profile where possible.
-- Add optional profile context to extension filters without breaking existing
-  one-argument callbacks.
-- Add migration, CRUD, isolation, and per-profile submission coverage.
-
-### Complexity
-
-Medium to high. Approximately four to seven focused development days,
-including the administration UI and migration coverage.
-
-### Trade-off
-
-This provides the most flexibility but turns the plugin into a small
-integration-management platform with correspondingly greater maintenance and
-support costs.
-
-## Recommended sequence
-
-1. Use the implemented Option 2 collection for compatible saved forms that can
-   share one EmailOctopus configuration.
-2. Isolate or remove forms that cannot satisfy the shared mappings.
-3. Adopt Option 3 only when at least two forms demonstrably need different
-   destinations, mappings, redirects, or messages.
-
-This sequence gives the current integration route portability without
-committing prematurely to profile management and a larger administration UI.
-
-## Compatibility requirements
-
-Any future implementation should:
-
-- preserve the existing saved-form configuration or provide an explicit
-  migration;
-- retain the current and deprecated shortcodes, filters, and constants;
-- keep unselected Jetpack forms isolated;
-- reject tampered or stale submission markers;
-- continue skipping Jetpack feedback already classified as spam or trash; and
-- avoid requiring URL scans or hard-coded page slugs.
-
-## Decision trigger
-
-Option 2 is the active implementation. Before starting Option 3, capture the
-actual forms, destinations, mappings, and success flows that cannot share the
-single `default` profile.
+JavaScript must not weaken conflict detection or turn the profile editor into a
+single nested save. Route-specific behaviour remains out of scope: the saved
+form, not its embedding page, owns the integration.

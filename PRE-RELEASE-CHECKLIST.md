@@ -23,7 +23,7 @@ normal release steps.
       for the Contact Newsletter Form pattern.
 - [ ] Review `readme.txt` against the current WordPress.org readme validator,
       including tags, Jetpack/EmailOctopus external-service
-      disclosures, stable tag `1.0.0`, screenshots, and the declared
+      disclosures, the Release Please-managed stable tag, screenshots, and the declared
       `Tested up to` value.
 - [ ] Run the full local release gate from a clean worktree:
 
@@ -40,16 +40,30 @@ pnpm release
 - [ ] Run Plugin Check against the unpacked release ZIP, matching the
       `.github/workflows/quality.yml` release job.
 - [ ] Install the generated ZIP into a fresh WordPress site with Jetpack active
-      and verify activation, settings save, pattern insertion, multiple selected
-      forms beside an unselected form, per-form signed context, success redirect,
-      normal Jetpack submission behaviour, and scalar-to-collection upgrade
-      handling for zero/one/multiple form cases.
+      and verify activation, pattern insertion, zero-profile state, profile
+      creation, both editor stages, multiple assigned forms beside an unassigned
+      form, profile/form signed context, profile-specific success redirects and
+      messages, normal Jetpack submission behaviour, and profile deletion.
+- [ ] Verify conflict-safe administration in two browser tabs: different-profile
+      saves preserve each other; a stale same-profile save is rejected with its
+      submitted values available for review; an active lock produces a retry
+      notice; and an expired lock can be reclaimed.
+- [ ] Record any required settings from the demo site, delete the exact former
+      plugin settings/version options, and recreate saved form `6243` through the
+      profile editor. Do not expect or advertise automatic migration.
+- [ ] Create a second temporary profile using HTTP stubs, confirm that separate
+      destinations, mappings, success pages, messages, health results, and
+      failures do not bleed, then remove every fixture without contacting
+      EmailOctopus.
 - [ ] Verify EmailOctopus opt-in mapping with real or sandbox provider
       credentials before making the public service claims final.
 - [ ] Confirm the release ZIP is built only from `release-contents.txt` and does
       not include development-only files or WordPress.org directory assets.
-- [ ] Copy the validated release contents to WordPress.org SVN `trunk`, tag
-      `1.0.0`, and upload only approved directory artwork/screenshots to
+- [ ] Confirm the ZIP contains no old `ran_octopus_forms`,
+      `ran_forms_settings`, or `ran-octopus-forms` identifiers and excludes every
+      repository-only `OPTION-N-IMPLEMENTATION.md` plan.
+- [ ] Copy the validated release contents to WordPress.org SVN `trunk`, tag the
+      Release Please version, and upload only approved directory artwork/screenshots to
       `/assets`.
 
 ## Translation readiness
@@ -77,5 +91,6 @@ pnpm release
 
 - [ ] Capture a short manual QA note covering disabled and EmailOctopus-enabled
       states.
-- [ ] Confirm the admin health/status wording is clear enough for a site owner
-      without developer support.
+- [ ] Confirm the integrations index, two-stage editor, stale-save notice, and
+      per-profile health wording are clear enough for a site owner without
+      developer support.

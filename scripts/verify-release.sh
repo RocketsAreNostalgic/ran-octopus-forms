@@ -24,9 +24,19 @@ if ! cmp -s "$first_archive" "$second_archive"; then
 	exit 1
 fi
 
-if unzip -Z1 "$first_archive" | grep -Eq '/(OPTION-[0-9]+-IMPLEMENTATION|ROADMAP)\.md$'; then
+if unzip -Z1 "$first_archive" | grep -Eq '/(OPTION-[^/]+-IMPLEMENTATION|ROADMAP)\.md$'; then
 	echo 'Repository-only planning documents leaked into the release archive.' >&2
 	exit 1
 fi
 
-echo 'Verified deterministic release archive and repository-only exclusions.'
+if unzip -Z1 "$first_archive" | grep -Eq '(ran_octopus_forms|ran_forms_settings|ran-octopus-forms)'; then
+	echo 'A removed legacy identifier leaked into a release archive path.' >&2
+	exit 1
+fi
+
+if unzip -p "$first_archive" | LC_ALL=C grep -aEq '(ran_octopus_forms|ran_forms_settings|ran-octopus-forms)'; then
+	echo 'A removed legacy identifier leaked into release archive contents.' >&2
+	exit 1
+fi
+
+echo 'Verified deterministic release archive, repository-only exclusions, and clean public identifiers.'

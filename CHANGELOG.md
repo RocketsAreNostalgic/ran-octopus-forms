@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.0 (unreleased)
+
+- Replaced the shared configuration with independent integration profiles keyed
+  by immutable UUIDs.
+- Added per-profile saved-form ownership, EmailOctopus destinations, field
+  mappings, success pages, and outcome messages.
+- Added a server-rendered integrations index and two-stage profile editor with
+  section-scoped saves, serialized writes, and stale-revision rejection.
+- Made signed submission context, subscriptions, redirects, one-time outcomes,
+  shortcode messages, and health checks explicitly profile-aware.
+- Kept the integrations index local-only and moved remote provider validation
+  behind an administrator-triggered per-profile health check.
+- Removed the former shared schema, automatic migration, legacy shortcode and
+  filter aliases, destination constants, and old runtime prefixes. Existing
+  integrations must be recreated as profiles after upgrading.
+
 ## [1.1.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v1.0.0...v1.1.0) (2026-07-19)
 
 
