@@ -106,8 +106,6 @@ First public release for WordPress 6.5+ and PHP 8.0+.
 
 = 1.0.0 =
 
-Existing settings are retained. When the configured contact page already
-contains one marked, unambiguous saved-form reference, that saved form becomes
-the portable target without rewriting page content. Inline, unmarked, missing,
-or ambiguous forms are not changed automatically; the contact-page fallback
-remains active where safe.
+Existing settings remain. One marked saved-form reference is recorded without
+rewriting content. Inline, unmarked, missing, or ambiguous forms remain in safe
+page-scoped compatibility mode.

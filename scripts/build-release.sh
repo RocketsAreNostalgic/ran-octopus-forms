@@ -39,9 +39,13 @@ while IFS= read -r release_path; do
 	esac
 done < release-contents.txt
 
+# Keep archive bytes stable across machines and repeated builds. ZIP stores
+# entry timestamps and filesystem metadata unless they are normalized first.
+find "$stage/$slug" -exec touch -t 200001010000 {} +
+
 (
 	cd "$stage"
-	zip -qr "$archive" "$slug"
+	find "$slug" -print | LC_ALL=C sort | zip -X -q "$archive" -@
 )
 
 unzip -t "$archive" >/dev/null

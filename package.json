@@ -38,7 +38,7 @@
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
 		"release": "sh scripts/build-release.sh",
-		"release:verify": "tmp_dir=$(mktemp -d) && sh scripts/build-release.sh \"$tmp_dir\""
+		"release:verify": "sh scripts/verify-release.sh"
 	},
 	"prettier": {
 		"useTabs": true,
