@@ -354,31 +354,6 @@ final class Settings {
 	}
 
 	/**
-	 * Temporary method name retained while the runtime wave becomes profile-explicit.
-	 *
-	 * This is not a flat-schema read: callers must supply a profile UUID or receive
-	 * no forms. The alias can be removed once mapper callers use normalize_form_ids().
-	 *
-	 * @param mixed $form_ids Raw values.
-	 * @return array<int,int>
-	 */
-	public static function normalize_target_form_ids( $form_ids ) {
-		return self::normalize_form_ids( $form_ids );
-	}
-
-	/**
-	 * Get form IDs for one explicit profile.
-	 *
-	 * @param string $profile_id Immutable profile UUID.
-	 * @return array<int,int>
-	 */
-	public static function get_target_form_ids( $profile_id = '' ) {
-		$profile = self::get_profile( $profile_id );
-
-		return null === $profile ? array() : self::normalize_form_ids( $profile['form_ids'] );
-	}
-
-	/**
 	 * Validate a UUID v4 profile identifier.
 	 *
 	 * @param string $profile_id Candidate identifier.

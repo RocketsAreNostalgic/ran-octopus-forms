@@ -125,7 +125,7 @@ msgstr ""
 #: includes/Admin.php:323
 #: includes/Admin.php:411
 #: includes/Admin.php:442
-#: includes/Settings.php:851
+#: includes/Settings.php:826
 msgid "That integration profile no longer exists."
 msgstr ""
 
@@ -820,56 +820,56 @@ msgstr ""
 msgid "Contact us"
 msgstr ""
 
-#: includes/Settings.php:508
+#: includes/Settings.php:483
 msgid "The profile settings change produced an invalid store and was not saved."
 msgstr ""
 
-#: includes/Settings.php:513
+#: includes/Settings.php:488
 msgid "The settings write lock expired before the change could be saved. Please retry."
 msgstr ""
 
-#: includes/Settings.php:516
+#: includes/Settings.php:491
 msgid "The integration profile could not be saved. No changes were applied."
 msgstr ""
 
-#: includes/Settings.php:559
+#: includes/Settings.php:534
 msgid "A unique profile identifier could not be generated."
 msgstr ""
 
-#: includes/Settings.php:577
+#: includes/Settings.php:552
 msgid "The submitted profile revision is invalid."
 msgstr ""
 
-#: includes/Settings.php:591
+#: includes/Settings.php:566
 msgid "Enter a profile name before saving."
 msgstr ""
 
 #. translators: 1: saved Jetpack form ID, 2: profile label.
-#: includes/Settings.php:718
+#: includes/Settings.php:693
 #, php-format
 msgid "Saved form #%1$d is already assigned to “%2$s”. Remove it there before assigning it to this profile."
 msgstr ""
 
-#: includes/Settings.php:829
+#: includes/Settings.php:804
 msgid "There’s one more step: please confirm your subscription using the email we’ve just sent you."
 msgstr ""
 
-#: includes/Settings.php:830
+#: includes/Settings.php:805
 msgid "You’re now subscribed to our newsletter."
 msgstr ""
 
-#: includes/Settings.php:831
+#: includes/Settings.php:806
 msgid "This email address has already been registered. If you have not yet confirmed your subscription, use the confirmation email you received earlier."
 msgstr ""
 
-#: includes/Settings.php:832
+#: includes/Settings.php:807
 msgid "Your message has been sent, but we could not add you to the newsletter. Please try again later."
 msgstr ""
 
-#: includes/Settings.php:842
+#: includes/Settings.php:817
 msgid "The stored integration settings do not use the current profile schema. Create a profile to replace them."
 msgstr ""
 
-#: includes/Settings.php:860
+#: includes/Settings.php:835
 msgid "This profile changed after the editor was opened. Reload it and apply your changes again."
 msgstr ""

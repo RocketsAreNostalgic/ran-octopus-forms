@@ -266,6 +266,14 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Runtime_Isolation_Test extends WP_U
 		} elseif ( 'removed_form' === $mutation ) {
 			$profile['form_ids'] = array();
 			$this->store_profiles( array( self::PROFILE_A => $profile ) );
+		} elseif ( 'reassigned_form' === $mutation ) {
+			$profile['form_ids'] = array();
+			$this->store_profiles(
+				array(
+					self::PROFILE_A => $profile,
+					self::PROFILE_B => $this->profile( 'Bravo', array( $form_id ), $success, 'list-bravo' ),
+				)
+			);
 		} elseif ( 'draft_form' === $mutation ) {
 			wp_update_post(
 				array(
@@ -294,6 +302,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Runtime_Isolation_Test extends WP_U
 		return array(
 			'deleted profile' => array( 'deleted_profile' ),
 			'removed form'    => array( 'removed_form' ),
+			'reassigned form' => array( 'reassigned_form' ),
 			'draft form'      => array( 'draft_form' ),
 			'malformed form'  => array( 'malformed_form' ),
 		);

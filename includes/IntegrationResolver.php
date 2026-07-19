@@ -269,21 +269,6 @@ final class IntegrationResolver {
 	}
 
 	/**
-	 * Get all selected IDs across profiles for diagnostics only.
-	 *
-	 * @return array<int,int>
-	 */
-	public static function get_target_form_ids() {
-		$form_ids = array();
-
-		foreach ( self::get_profiles() as $profile ) {
-			$form_ids = array_merge( $form_ids, $profile->get_form_ids() );
-		}
-
-		return Settings::normalize_form_ids( $form_ids );
-	}
-
-	/**
 	 * Build the six-filter runtime configuration for one immutable profile.
 	 *
 	 * @param string              $profile_id Immutable profile UUID.
