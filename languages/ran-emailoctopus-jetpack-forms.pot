@@ -81,7 +81,7 @@ msgid "Assigned forms"
 msgstr ""
 
 #: includes/Admin.php:257
-#: includes/Admin.php:558
+#: includes/Admin.php:555
 #: includes/HealthCheck.php:288
 #: includes/HealthCheck.php:292
 #: includes/HealthCheck.php:298
@@ -124,7 +124,7 @@ msgstr ""
 
 #: includes/Admin.php:323
 #: includes/Admin.php:411
-#: includes/Admin.php:442
+#: includes/Admin.php:439
 #: includes/Settings.php:826
 msgid "That integration profile no longer exists."
 msgstr ""
@@ -190,205 +190,204 @@ msgstr ""
 msgid "None assigned"
 msgstr ""
 
-#: includes/Admin.php:418
-#: includes/Admin.php:825
-msgid "Not configured"
-msgstr ""
-
-#: includes/Admin.php:422
+#: includes/Admin.php:419
 msgid "Delete integration profile"
 msgstr ""
 
 #. translators: %s: profile label.
-#: includes/Admin.php:423
+#: includes/Admin.php:420
 #, php-format
 msgid "Delete “%s”? Its assigned forms will return to native Jetpack handling."
 msgstr ""
 
 #. translators: %s: profile label.
-#: includes/Admin.php:424
+#: includes/Admin.php:421
 msgid "Assigned form IDs:"
 msgstr ""
 
-#: includes/Admin.php:425
+#: includes/Admin.php:422
 msgid "EmailOctopus destination:"
 msgstr ""
 
-#: includes/Admin.php:431
+#: includes/Admin.php:428
 msgid "Delete profile"
 msgstr ""
 
-#: includes/Admin.php:432
+#: includes/Admin.php:429
 msgid "Cancel"
 msgstr ""
 
 #. translators: %s: profile label.
-#: includes/Admin.php:450
+#: includes/Admin.php:447
 #, php-format
 msgid "Health — %s"
 msgstr ""
 
-#: includes/Admin.php:454
+#: includes/Admin.php:451
 msgid "State:"
 msgstr ""
 
-#: includes/Admin.php:462
+#: includes/Admin.php:459
 msgid "Back to integrations"
 msgstr ""
 
-#: includes/Admin.php:475
+#: includes/Admin.php:472
 msgid "Health"
 msgstr ""
 
-#: includes/Admin.php:504
+#: includes/Admin.php:501
 msgid "Saved Jetpack forms"
 msgstr ""
 
-#: includes/Admin.php:505
+#: includes/Admin.php:502
 msgid "One saved form can belong to only one profile. Clear every checkbox to leave this profile intentionally unassigned."
 msgstr ""
 
-#: includes/Admin.php:512
+#: includes/Admin.php:509
 #: includes/HealthCheck.php:313
 msgid "Untitled saved form"
 msgstr ""
 
 #. translators: %s: owning profile label.
-#: includes/Admin.php:520
+#: includes/Admin.php:517
 #, php-format
 msgid " — assigned to %s"
 msgstr ""
 
 #. translators: %d: unavailable stored form ID.
-#: includes/Admin.php:524
+#: includes/Admin.php:521
 #, php-format
 msgid "Unavailable selected form #%d — uncheck to remove"
 msgstr ""
 
-#: includes/Admin.php:529
+#: includes/Admin.php:526
 msgid "No published saved Jetpack forms are available."
 msgstr ""
 
 #. translators: 1: form name, 2: form ID.
-#: includes/Admin.php:546
+#: includes/Admin.php:543
 #, php-format
 msgid "Form: %1$s (%2$s)"
 msgstr ""
 
 #. translators: 1: form name, 2: form ID.
 #. translators: 1: list name, 2: list ID.
+#: includes/Admin.php:543
 #: includes/Admin.php:546
-#: includes/Admin.php:549
 msgid "Untitled"
 msgstr ""
 
 #. translators: 1: list name, 2: list ID.
-#: includes/Admin.php:549
+#: includes/Admin.php:546
 #, php-format
 msgid "List: %1$s (%2$s)"
 msgstr ""
 
 #. translators: %s: stored destination value.
-#: includes/Admin.php:555
+#: includes/Admin.php:552
 #, php-format
 msgid "Stored destination unavailable from API: %s"
 msgstr ""
 
-#: includes/Admin.php:560
-#: includes/Admin.php:579
+#: includes/Admin.php:557
+#: includes/Admin.php:576
 msgid "— Not configured —"
 msgstr ""
 
-#: includes/Admin.php:569
+#: includes/Admin.php:566
 msgid "The stored choice is preserved."
 msgstr ""
 
 #. translators: %s: stale source key.
-#: includes/Admin.php:583
-#: includes/Admin.php:630
+#: includes/Admin.php:580
+#: includes/Admin.php:627
 #, php-format
 msgid "Stored unavailable source: %s"
 msgstr ""
 
-#: includes/Admin.php:611
+#: includes/Admin.php:608
 msgid "Custom field mappings"
 msgstr ""
 
-#: includes/Admin.php:615
+#: includes/Admin.php:612
 msgid "Stored mappings remain available and will not be rewritten unless this stage is saved."
 msgstr ""
 
-#: includes/Admin.php:619
+#: includes/Admin.php:616
 msgid "No custom EmailOctopus fields are available for this destination."
 msgstr ""
 
-#: includes/Admin.php:624
+#: includes/Admin.php:621
 msgid "— Do not send —"
 msgstr ""
 
 #. translators: %s: EmailOctopus field tag.
-#: includes/Admin.php:636
+#: includes/Admin.php:633
 #, php-format
 msgid "Transform for %s"
 msgstr ""
 
-#: includes/Admin.php:651
+#: includes/Admin.php:648
 msgid "Pending confirmation message"
 msgstr ""
 
-#: includes/Admin.php:652
+#: includes/Admin.php:649
 msgid "Subscribed message"
 msgstr ""
 
-#: includes/Admin.php:653
+#: includes/Admin.php:650
 msgid "Existing subscriber message"
 msgstr ""
 
-#: includes/Admin.php:654
+#: includes/Admin.php:651
 msgid "Subscription failed message"
 msgstr ""
 
-#: includes/Admin.php:749
+#: includes/Admin.php:746
 msgid "Profile created. Dependent field choices have been refreshed from the saved forms."
 msgstr ""
 
-#: includes/Admin.php:750
+#: includes/Admin.php:747
 msgid "Identity and assignment saved. Dependent field choices have been refreshed."
 msgstr ""
 
-#: includes/Admin.php:751
+#: includes/Admin.php:748
 msgid "Profile behaviour saved."
 msgstr ""
 
-#: includes/Admin.php:752
+#: includes/Admin.php:749
 msgid "Profile deleted."
 msgstr ""
 
-#: includes/Admin.php:753
+#: includes/Admin.php:750
 msgid "Health check completed."
 msgstr ""
 
-#: includes/Admin.php:756
+#: includes/Admin.php:753
 msgid "The change was not saved."
 msgstr ""
 
-#: includes/Admin.php:784
+#: includes/Admin.php:781
 msgid "You are not allowed to manage integration profiles."
 msgstr ""
 
 #. translators: %s: EmailOctopus list ID.
-#: includes/Admin.php:819
+#: includes/Admin.php:816
 #, php-format
 msgid "List %s"
 msgstr ""
 
 #. translators: %s: EmailOctopus form ID.
-#: includes/Admin.php:823
+#: includes/Admin.php:820
 #, php-format
 msgid "Form %s"
 msgstr ""
 
-#: includes/Admin.php:831
+#: includes/Admin.php:822
+msgid "Not configured"
+msgstr ""
+
+#: includes/Admin.php:828
 msgid "None"
 msgstr ""
 

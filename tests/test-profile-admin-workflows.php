@@ -220,6 +220,26 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Admin_Workflows_Test extends WP_Uni
 		$this->assertStringNotContainsString( 'action="options.php"', $markup );
 	}
 
+	/** The delete confirmation renders from the current profile configuration. */
+	public function test_delete_confirmation_renders_profile_summary() {
+		$form_id = $this->create_saved_form();
+		$id      = $this->create_profile( 'Delete me', array( $form_id ), 'form', 'form-to-delete' );
+		$_GET    = array(
+			'page'       => Admin::PAGE_SLUG,
+			'view'       => 'delete',
+			'profile_id' => $id,
+		);
+		ob_start();
+		Admin::render_page();
+		$markup = ob_get_clean();
+
+		$this->assertStringContainsString( 'Delete integration profile', $markup );
+		$this->assertStringContainsString( 'Delete me', $markup );
+		$this->assertStringContainsString( (string) $form_id, $markup );
+		$this->assertStringContainsString( 'Form form-to-delete', $markup );
+		$this->assertStringContainsString( 'ran_emailoctopus_jetpack_forms_delete_profile', $markup );
+	}
+
 	/** Assigned and unavailable form rows remain explicit and removable. */
 	public function test_identity_editor_disables_foreign_forms_and_shows_unavailable_selection() {
 		$owned_form = $this->create_saved_form( 'Owned form' );

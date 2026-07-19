@@ -413,10 +413,7 @@ final class Admin {
 		}
 		$form_ids            = $profile->get_form_ids();
 		$form_summary        = empty( $form_ids ) ? __( 'None assigned', 'ran-emailoctopus-jetpack-forms' ) : implode( ', ', array_map( 'strval', $form_ids ) );
-		$destination         = $profile->get_destination();
-		$destination_summary = empty( $destination['type'] ) || empty( $destination['id'] )
-			? __( 'Not configured', 'ran-emailoctopus-jetpack-forms' )
-			: self::destination_label( $destination['type'], $destination['id'] );
+		$destination_summary = self::destination_label( $profile->get_configuration() );
 		?>
 		<div class="ran-profile-panel">
 			<h2><?php esc_html_e( 'Delete integration profile', 'ran-emailoctopus-jetpack-forms' ); ?></h2>
