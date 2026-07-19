@@ -493,19 +493,19 @@ msgstr ""
 msgid "Send lowercase"
 msgstr ""
 
-#: includes/EmailOctopusSubscriber.php:47
+#: includes/EmailOctopusSubscriber.php:45
 msgid "A valid email address is required."
 msgstr ""
 
-#: includes/EmailOctopusSubscriber.php:54
+#: includes/EmailOctopusSubscriber.php:52
 msgid "EmailOctopus credentials are unavailable."
 msgstr ""
 
-#: includes/EmailOctopusSubscriber.php:98
+#: includes/EmailOctopusSubscriber.php:100
 msgid "EmailOctopus returned an unknown contact status."
 msgstr ""
 
-#: includes/EmailOctopusSubscriber.php:107
+#: includes/EmailOctopusSubscriber.php:109
 msgid "EmailOctopus returned an unexpected response."
 msgstr ""
 
@@ -883,7 +883,7 @@ msgid "Another settings change won the write lock. Please retry."
 msgstr ""
 
 #: includes/Patterns.php:51
-msgid "RAN Forms"
+msgid "RAN EmailOctopus Forms"
 msgstr ""
 
 #: includes/Patterns.php:62

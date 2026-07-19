@@ -21,19 +21,14 @@ final class SubmissionMessages {
 	const SHORTCODE = 'ran_emailoctopus_jetpack_forms_subscription_message';
 
 	/**
-	 * Previous shortcode retained for existing success-page content.
-	 */
-	const LEGACY_SHORTCODE = 'ran_octopus_forms_subscription_message';
-
-	/**
 	 * Query argument carrying a one-time result token.
 	 */
-	const RESULT_QUERY_ARG = 'ran_octopus_forms_result';
+	const RESULT_QUERY_ARG = 'ran_emailoctopus_jetpack_forms_result';
 
 	/**
 	 * Transient key prefix for one-time result tokens.
 	 */
-	const RESULT_TRANSIENT_PREFIX = 'ran_octopus_forms_result_';
+	const RESULT_TRANSIENT_PREFIX = 'ran_emailoctopus_jetpack_forms_result_';
 
 	/**
 	 * Register visitor-facing result hooks.
@@ -42,7 +37,6 @@ final class SubmissionMessages {
 	 */
 	public static function register() {
 		add_shortcode( self::SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
-		add_shortcode( self::LEGACY_SHORTCODE, array( __CLASS__, 'render_shortcode' ) );
 		add_filter( 'render_block_core/shortcode', array( __CLASS__, 'render_shortcode_block' ), 10, 2 );
 		add_action( 'template_redirect', array( __CLASS__, 'disable_cache_for_result' ) );
 	}
@@ -52,14 +46,13 @@ final class SubmissionMessages {
 	 *
 	 * @param string $redirect   Redirect URL.
 	 * @param int    $post_id    Jetpack feedback post ID.
-	 * @param string $profile_id Integration profile ID.
+	 * @param IntegrationProfile $profile Explicit integration profile.
 	 * @return string
 	 */
-	public static function add_result_to_redirect( $redirect, $post_id, $profile_id = 'default' ) {
+	public static function add_result_to_redirect( $redirect, $post_id, IntegrationProfile $profile ) {
 		$outcome = sanitize_key( (string) get_post_meta( $post_id, '_ran_emailoctopus_subscription_status', true ) );
-		$profile = IntegrationResolver::get_profile( sanitize_key( (string) $profile_id ) );
 
-		if ( ! self::is_supported_outcome( $outcome ) || null === $profile ) {
+		if ( ! self::is_supported_outcome( $outcome ) ) {
 			return $redirect;
 		}
 
@@ -83,33 +76,24 @@ final class SubmissionMessages {
 	 * @return string
 	 */
 	public static function render_shortcode() {
-		if ( ! is_page( absint( Settings::get( 'success_page_id' ) ) ) ) {
-			return '';
-		}
+		$token = self::get_request_token();
 
-		$token = isset( $_GET[ self::RESULT_QUERY_ARG ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::RESULT_QUERY_ARG ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- opaque, short-lived display token only.
-
-		if ( ! preg_match( '/^[A-Za-z0-9]{32}$/', $token ) ) {
+		if ( '' === $token ) {
 			return '';
 		}
 
 		$result = get_transient( self::RESULT_TRANSIENT_PREFIX . $token );
-		delete_transient( self::RESULT_TRANSIENT_PREFIX . $token );
 
-		if ( is_string( $result ) ) {
-			// Existing one-time tokens stored only the outcome.
-			$profile_id = 'default';
-			$outcome    = $result;
-		} elseif ( is_array( $result ) ) {
-			$profile_id = sanitize_key( (string) ( $result['profile_id'] ?? '' ) );
-			$outcome    = sanitize_key( (string) ( $result['outcome'] ?? '' ) );
-		} else {
+		if ( ! is_array( $result ) ) {
 			return '';
 		}
 
+		$profile_id = sanitize_key( (string) ( $result['profile_id'] ?? '' ) );
+		$outcome    = sanitize_key( (string) ( $result['outcome'] ?? '' ) );
+
 		$profile = IntegrationResolver::get_profile( $profile_id );
 
-		if ( ! self::is_supported_outcome( $outcome ) || null === $profile ) {
+		if ( ! self::is_supported_outcome( $outcome ) || null === $profile || ! self::is_profile_success_page( $profile ) ) {
 			return '';
 		}
 
@@ -119,8 +103,10 @@ final class SubmissionMessages {
 			return '';
 		}
 
+		delete_transient( self::RESULT_TRANSIENT_PREFIX . $token );
+
 		return sprintf(
-			'<p class="ran-emailoctopus-jetpack-forms-subscription-message ran-octopus-forms-subscription-message" role="status">%s</p>',
+			'<p class="ran-emailoctopus-jetpack-forms-subscription-message" role="status">%s</p>',
 			esc_html( $message )
 		);
 	}
@@ -139,7 +125,7 @@ final class SubmissionMessages {
 
 		$shortcode_content = isset( $block['innerHTML'] ) && is_string( $block['innerHTML'] ) ? $block['innerHTML'] : $block_content;
 
-		if ( ! has_shortcode( $shortcode_content, self::SHORTCODE ) && ! has_shortcode( $block_content, self::SHORTCODE ) && ! has_shortcode( $shortcode_content, self::LEGACY_SHORTCODE ) && ! has_shortcode( $block_content, self::LEGACY_SHORTCODE ) ) {
+		if ( ! has_shortcode( $shortcode_content, self::SHORTCODE ) && ! has_shortcode( $block_content, self::SHORTCODE ) ) {
 			return $block_content;
 		}
 
@@ -152,7 +138,22 @@ final class SubmissionMessages {
 	 * @return void
 	 */
 	public static function disable_cache_for_result() {
-		if ( ! is_page( absint( Settings::get( 'success_page_id' ) ) ) || empty( $_GET[ self::RESULT_QUERY_ARG ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- cache bypass only.
+		$token = self::get_request_token();
+
+		if ( '' === $token ) {
+			return;
+		}
+
+		$result = get_transient( self::RESULT_TRANSIENT_PREFIX . $token );
+
+		if ( ! is_array( $result ) ) {
+			return;
+		}
+
+		$profile = IntegrationResolver::get_profile( sanitize_key( (string) ( $result['profile_id'] ?? '' ) ) );
+		$outcome = sanitize_key( (string) ( $result['outcome'] ?? '' ) );
+
+		if ( null === $profile || ! self::is_supported_outcome( $outcome ) || ! self::is_profile_success_page( $profile ) ) {
 			return;
 		}
 
@@ -194,6 +195,29 @@ final class SubmissionMessages {
 			return sanitize_textarea_field( (string) $config[ $key ] );
 		}
 
-		return Settings::get_emailoctopus_outcome_message( $outcome );
+		return '';
+	}
+
+	/**
+	 * Read and validate the opaque result token from the request.
+	 *
+	 * @return string
+	 */
+	private static function get_request_token() {
+		$token = isset( $_GET[ self::RESULT_QUERY_ARG ] ) ? sanitize_text_field( wp_unslash( $_GET[ self::RESULT_QUERY_ARG ] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- opaque, short-lived display token only.
+
+		return preg_match( '/^[A-Za-z0-9]{32}$/', $token ) ? $token : '';
+	}
+
+	/**
+	 * Whether the current request is the profile's configured success page.
+	 *
+	 * @param IntegrationProfile $profile Integration profile.
+	 * @return bool
+	 */
+	private static function is_profile_success_page( IntegrationProfile $profile ) {
+		$success_page_id = $profile->get_success_page_id();
+
+		return 0 < $success_page_id && is_page( $success_page_id );
 	}
 }

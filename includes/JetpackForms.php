@@ -18,7 +18,7 @@ final class JetpackForms {
 	/**
 	 * Nonce field signing the portable form context.
 	 */
-	const TARGET_FIELD = 'ran_octopus_forms_target';
+	const TARGET_FIELD = 'ran_emailoctopus_jetpack_forms_target';
 
 	/**
 	 * Portable integration profile field.
@@ -64,15 +64,10 @@ final class JetpackForms {
 			return $pre_render;
 		}
 
-		if ( ! IntegrationResolver::is_portable_available() ) {
-			return $pre_render;
-		}
-
 		$form_ref = self::get_block_form_ref( $parsed_block );
+		$profile  = IntegrationResolver::get_profile_for_form_id( $form_ref );
 
-		if ( 0 < $form_ref && IntegrationResolver::is_routing_eligible_form_id( $form_ref ) ) {
-			$profile = IntegrationResolver::get_default_profile();
-
+		if ( 0 < $form_ref && null !== $profile && IntegrationResolver::is_routing_eligible_form_id( $form_ref, $profile->get_id() ) ) {
 			if ( null !== self::$portable_render_context && $form_ref === self::$portable_render_context['form_ref'] ) {
 				++self::$portable_render_context['depth'];
 			} else {
@@ -166,7 +161,7 @@ final class JetpackForms {
 	public static function is_target_form_html( $form_html ) {
 		unset( $form_html );
 
-		return IntegrationResolver::is_portable_available() && null !== self::$portable_render_context;
+		return null !== self::$portable_render_context;
 	}
 
 	/**
@@ -209,13 +204,15 @@ final class JetpackForms {
 			return $redirect;
 		}
 
-		$success_url = Settings::get_success_url();
+		$profile       = $context['profile'];
+		$configuration = $profile->get_configuration();
+		$success_url   = (string) ( $configuration['success_url'] ?? '' );
 
 		if ( '' === $success_url ) {
 			return $redirect;
 		}
 
-		return SubmissionMessages::add_result_to_redirect( $success_url, $post_id, $context['profile_id'] );
+		return SubmissionMessages::add_result_to_redirect( $success_url, $post_id, $profile );
 	}
 
 	/**
@@ -243,22 +240,25 @@ final class JetpackForms {
 			return;
 		}
 
-		if ( ! IntegrationResolver::is_subscription_eligible_form_id( $context['form_ref'] ) ) {
+		$profile       = $context['profile'];
+		$configuration = $profile->get_configuration();
+
+		if ( ! IntegrationResolver::is_subscription_eligible_form_id( $context['form_ref'], $profile->get_id() ) ) {
 			return;
 		}
 
-		if ( ! self::has_newsletter_opt_in( $all_values ) ) {
+		if ( ! self::has_newsletter_opt_in( $all_values, (string) ( $configuration['newsletter_source'] ?? '' ) ) ) {
 			return;
 		}
 
-		$email_address = EmailOctopusFieldMapper::get_email_address( $all_values );
+		$email_address = EmailOctopusFieldMapper::get_email_address( $all_values, (string) ( $configuration['emailoctopus_email_source'] ?? '' ) );
 
 		if ( '' === $email_address ) {
 			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'failed' );
 			return;
 		}
 
-		$result = ( new EmailOctopusSubscriber( $context['profile_id'] ) )->subscribe( $email_address, $all_values );
+		$result = ( new EmailOctopusSubscriber( $profile ) )->subscribe( $email_address, $all_values );
 
 		if ( is_wp_error( $result ) ) {
 			update_post_meta( $post_id, '_ran_emailoctopus_subscription_status', 'failed' );
@@ -279,14 +279,14 @@ final class JetpackForms {
 	/**
 	 * Parse and verify the submitted integration context.
 	 *
-	 * @return array{profile_id:string,form_ref:int}|null
+	 * @return array{profile_id:string,form_ref:int,profile:IntegrationProfile}|null
 	 */
 	private static function get_submitted_context() {
 		if ( ! isset( $_POST[ self::TARGET_FIELD ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- verification occurs below.
 			return null;
 		}
 
-		if ( ! isset( $_POST[ self::PROFILE_FIELD ], $_POST[ self::FORM_REF_FIELD ] ) || ! IntegrationResolver::is_portable_available() ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
+		if ( ! isset( $_POST[ self::PROFILE_FIELD ], $_POST[ self::FORM_REF_FIELD ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
 			return null;
 		}
 
@@ -295,7 +295,9 @@ final class JetpackForms {
 		$form_ref   = absint( wp_unslash( $_POST[ self::FORM_REF_FIELD ] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Missing -- signed context is verified below.
 		$profile    = IntegrationResolver::get_profile( $profile_id );
 
-		if ( null === $profile || ! in_array( $form_ref, $profile->get_form_ids(), true ) || ! IntegrationResolver::is_routing_eligible_form_id( $form_ref ) ) {
+		$owner = IntegrationResolver::get_profile_for_form_id( $form_ref );
+
+		if ( null === $profile || null === $owner || $owner->get_id() !== $profile->get_id() || ! in_array( $form_ref, $profile->get_form_ids(), true ) || ! IntegrationResolver::is_routing_eligible_form_id( $form_ref, $profile->get_id() ) ) {
 			return null;
 		}
 
@@ -306,6 +308,7 @@ final class JetpackForms {
 		return array(
 			'profile_id' => $profile_id,
 			'form_ref'   => $form_ref,
+			'profile'    => $profile,
 		);
 	}
 
@@ -313,7 +316,7 @@ final class JetpackForms {
 	 * Verify Jetpack's authoritative saved-form identity against signed context.
 	 *
 	 * @param int                                         $feedback_id Feedback post ID.
-	 * @param array{profile_id:string,form_ref:int} $context Signed context.
+	 * @param array{profile_id:string,form_ref:int,profile:IntegrationProfile} $context Signed context.
 	 * @return bool
 	 */
 	private static function feedback_matches_context( $feedback_id, $context ) {
@@ -379,16 +382,17 @@ final class JetpackForms {
 	 * @return string
 	 */
 	private static function get_portable_nonce_action( $profile_id, $form_ref ) {
-		return 'ran_octopus_forms_target_' . sanitize_key( $profile_id ) . '_' . absint( $form_ref );
+		return 'ran_emailoctopus_jetpack_forms_target_' . sanitize_key( $profile_id ) . '_' . absint( $form_ref );
 	}
 
 	/**
 	 * Whether submitted fields include the configured newsletter opt-in.
 	 *
-	 * @param array $all_values Contact form fields.
+	 * @param array  $all_values Contact form fields.
+	 * @param string $source     Explicit profile consent source.
 	 * @return bool
 	 */
-	private static function has_newsletter_opt_in( $all_values ) {
-		return EmailOctopusFieldMapper::has_truthy_submitted_value( $all_values, Settings::get_newsletter_source() );
+	private static function has_newsletter_opt_in( $all_values, $source ) {
+		return EmailOctopusFieldMapper::has_truthy_submitted_value( $all_values, $source );
 	}
 }

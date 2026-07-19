@@ -18,12 +18,12 @@ final class Patterns {
 	/**
 	 * Pattern slug.
 	 */
-	const CONTACT_FORM_PATTERN = 'ran-octopus-forms/contact-form';
+	const CONTACT_FORM_PATTERN = 'ran-emailoctopus-jetpack-forms/contact-form';
 
 	/**
 	 * Pattern category owned by this plugin.
 	 */
-	const PATTERN_CATEGORY = 'ran-octopus-forms';
+	const PATTERN_CATEGORY = 'ran-emailoctopus-jetpack-forms';
 
 	/**
 	 * Register hooks.
@@ -48,7 +48,7 @@ final class Patterns {
 		register_block_pattern_category(
 			self::PATTERN_CATEGORY,
 			array(
-				'label' => __( 'RAN Forms', 'ran-emailoctopus-jetpack-forms' ),
+				'label' => __( 'RAN EmailOctopus Forms', 'ran-emailoctopus-jetpack-forms' ),
 			)
 		);
 

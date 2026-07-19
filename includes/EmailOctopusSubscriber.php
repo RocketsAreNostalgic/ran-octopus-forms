@@ -16,21 +16,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 final class EmailOctopusSubscriber {
 	/**
-	 * Integration profile used for this request.
+	 * Immutable integration profile used for this request.
 	 *
-	 * @var string
+	 * @var IntegrationProfile
 	 */
-	private $profile_id;
+	private $profile;
 
 	/**
 	 * Create a subscriber for one integration profile.
 	 *
-	 * The optional argument preserves the existing public construction pattern.
-	 *
-	 * @param string $profile_id Integration profile ID.
+	 * @param IntegrationProfile $profile Explicit integration profile.
 	 */
-	public function __construct( $profile_id = 'default' ) {
-		$this->profile_id = sanitize_key( (string) $profile_id );
+	public function __construct( IntegrationProfile $profile ) {
+		$this->profile = $profile;
 	}
 
 	/**
@@ -44,14 +42,14 @@ final class EmailOctopusSubscriber {
 		$email_address = sanitize_email( $email_address );
 
 		if ( ! is_email( $email_address ) ) {
-			return new \WP_Error( 'ran_octopus_forms_invalid_email', __( 'A valid email address is required.', 'ran-emailoctopus-jetpack-forms' ) );
+			return new \WP_Error( 'ran_emailoctopus_jetpack_forms_invalid_email', __( 'A valid email address is required.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$api_key = $this->get_api_key();
 		$list_id = $this->get_list_id();
 
 		if ( '' === $api_key || '' === $list_id ) {
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_missing_credentials', __( 'EmailOctopus credentials are unavailable.', 'ran-emailoctopus-jetpack-forms' ) );
+			return new \WP_Error( 'ran_emailoctopus_jetpack_forms_emailoctopus_missing_credentials', __( 'EmailOctopus credentials are unavailable.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		$body = array(
@@ -59,7 +57,11 @@ final class EmailOctopusSubscriber {
 			'email_address' => $email_address,
 		);
 
-		$fields = EmailOctopusFieldMapper::build_fields_payload( is_array( $all_values ) ? $all_values : array() );
+		$configuration = $this->profile->get_configuration();
+		$fields        = EmailOctopusFieldMapper::build_fields_payload(
+			is_array( $all_values ) ? $all_values : array(),
+			is_array( $configuration['emailoctopus_field_map'] ?? null ) ? $configuration['emailoctopus_field_map'] : array()
+		);
 
 		if ( ! empty( $fields ) ) {
 			$body['fields'] = $fields;
@@ -95,7 +97,7 @@ final class EmailOctopusSubscriber {
 				return array( 'outcome' => 'subscribed' );
 			}
 
-			return new \WP_Error( 'ran_octopus_forms_emailoctopus_unknown_contact_status', __( 'EmailOctopus returned an unknown contact status.', 'ran-emailoctopus-jetpack-forms' ) );
+			return new \WP_Error( 'ran_emailoctopus_jetpack_forms_emailoctopus_unknown_contact_status', __( 'EmailOctopus returned an unknown contact status.', 'ran-emailoctopus-jetpack-forms' ) );
 		}
 
 		if ( is_array( $body ) && 'MEMBER_EXISTS_WITH_EMAIL_ADDRESS' === ( $body['code'] ?? '' ) ) {
@@ -103,7 +105,7 @@ final class EmailOctopusSubscriber {
 		}
 
 		return new \WP_Error(
-			'ran_octopus_forms_emailoctopus_bad_response',
+			'ran_emailoctopus_jetpack_forms_emailoctopus_bad_response',
 			is_array( $body ) && ! empty( $body['message'] ) ? sanitize_text_field( (string) $body['message'] ) : __( 'EmailOctopus returned an unexpected response.', 'ran-emailoctopus-jetpack-forms' ),
 			array(
 				'status' => $status_code,
@@ -127,14 +129,14 @@ final class EmailOctopusSubscriber {
 	 * @return string
 	 */
 	private function get_list_id() {
-		$configuration = $this->get_profile_configuration();
-		$list_id       = isset( $configuration['emailoctopus_list_id'] ) ? (string) $configuration['emailoctopus_list_id'] : Settings::get_emailoctopus_list_id();
+		$configuration = $this->profile->get_configuration();
+		$list_id       = (string) ( $configuration['emailoctopus_list_id'] ?? '' );
 
 		if ( '' !== $list_id ) {
 			return $list_id;
 		}
 
-		$form_id = isset( $configuration['emailoctopus_form_id'] ) ? (string) $configuration['emailoctopus_form_id'] : Settings::get_emailoctopus_form_id();
+		$form_id = (string) ( $configuration['emailoctopus_form_id'] ?? '' );
 
 		if ( '' === $form_id ) {
 			return '';
@@ -147,20 +149,5 @@ final class EmailOctopusSubscriber {
 		}
 
 		return sanitize_text_field( (string) ( $form['list_id'] ?? '' ) );
-	}
-
-	/**
-	 * Get the resolved profile configuration without changing legacy filters.
-	 *
-	 * @return array<string,mixed>
-	 */
-	private function get_profile_configuration() {
-		$profile = IntegrationResolver::get_profile( $this->profile_id );
-
-		if ( null === $profile ) {
-			return array();
-		}
-
-		return $profile->get_configuration();
 	}
 }

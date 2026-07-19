@@ -46,10 +46,11 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Get Jetpack fields shared by every structurally valid selected form.
 	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
 	 * @return array<int,array<string,string>>
 	 */
-	public static function get_source_fields() {
-		return self::get_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	public static function get_source_fields( $form_ids ) {
+		return self::get_source_fields_for_saved_forms( $form_ids );
 	}
 
 	/**
@@ -58,11 +59,11 @@ final class EmailOctopusFieldMapper {
 	 * Unavailable or structurally invalid selections remain represented with an
 	 * empty field list so diagnostics can retain their identity.
 	 *
-	 * @param array<int,int>|null $form_ids Saved form IDs, or the configured collection.
+	 * @param array<int,int> $form_ids Saved form IDs.
 	 * @return array<int,array<int,array<string,string>>>
 	 */
-	public static function get_source_field_matrix( $form_ids = null ) {
-		$form_ids = null === $form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $form_ids );
+	public static function get_source_field_matrix( $form_ids ) {
+		$form_ids = Settings::normalize_form_ids( $form_ids );
 		$matrix   = array();
 
 		foreach ( $form_ids as $form_id ) {
@@ -106,10 +107,11 @@ final class EmailOctopusFieldMapper {
 	 * a newsletter signup form. Radio and select fields need an affirmative
 	 * option to be configured separately, so they are not supported.
 	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
 	 * @return array<int,array<string,string>>
 	 */
-	public static function get_newsletter_source_fields() {
-		return self::get_newsletter_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	public static function get_newsletter_source_fields( $form_ids ) {
+		return self::get_newsletter_source_fields_for_saved_forms( $form_ids );
 	}
 
 	/**
@@ -140,10 +142,11 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Get fields that can be used as EmailOctopus email_address.
 	 *
+	 * @param array<int,int> $form_ids Saved form IDs.
 	 * @return array<int,array<string,string>>
 	 */
-	public static function get_email_source_fields() {
-		return self::get_email_source_fields_for_saved_forms( Settings::get_target_form_ids() );
+	public static function get_email_source_fields( $form_ids ) {
+		return self::get_email_source_fields_for_saved_forms( $form_ids );
 	}
 
 	/**
@@ -194,13 +197,13 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Report subscription compatibility independently for each selected form.
 	 *
-	 * @param array<int,int>|null      $form_ids      Saved form IDs, or the configured collection.
-	 * @param array<string,mixed>|null $configuration Settings being checked, or current settings.
+	 * @param array<int,int>           $form_ids      Saved form IDs.
+	 * @param array<string,mixed>      $configuration Explicit profile configuration.
 	 * @return array<int,array{eligible:bool,routing_reason:string,reasons:array<int,string>,source_failures:array<int,array{kind:string,tag:string,source:string,reason:string,expected_type:string,actual_type:string}>}>
 	 */
-	public static function get_subscription_compatibility( $form_ids = null, $configuration = null ) {
-		$form_ids      = null === $form_ids ? Settings::get_target_form_ids() : Settings::normalize_target_form_ids( $form_ids );
-		$configuration = is_array( $configuration ) ? $configuration : IntegrationResolver::get_default_profile()->get_configuration();
+	public static function get_subscription_compatibility( $form_ids, $configuration ) {
+		$form_ids      = Settings::normalize_form_ids( $form_ids );
+		$configuration = is_array( $configuration ) ? $configuration : array();
 		$matrix        = self::get_source_field_matrix( $form_ids );
 		$email_source  = self::normalize_source_key( (string) ( $configuration['emailoctopus_email_source'] ?? '' ) );
 		$newsletter    = self::normalize_source_key( (string) ( $configuration['newsletter_source'] ?? '' ) );
@@ -209,7 +212,7 @@ final class EmailOctopusFieldMapper {
 		$results       = array();
 
 		foreach ( $form_ids as $form_id ) {
-			$routing_reason = IntegrationResolver::get_target_form_reason( $form_id, $form_ids );
+			$routing_reason = IntegrationResolver::get_target_form_reason( $form_id );
 			$failures       = array();
 			$reasons        = array();
 
@@ -267,12 +270,13 @@ final class EmailOctopusFieldMapper {
 	/**
 	 * Whether one selected form has every configured subscription source.
 	 *
-	 * @param int $form_id Saved Jetpack form ID.
+	 * @param int                 $form_id       Saved Jetpack form ID.
+	 * @param array<string,mixed> $configuration Explicit profile configuration.
 	 * @return bool
 	 */
-	public static function is_subscription_compatible_form_id( $form_id ) {
+	public static function is_subscription_compatible_form_id( $form_id, $configuration ) {
 		$form_id = absint( $form_id );
-		$results = self::get_subscription_compatibility();
+		$results = self::get_subscription_compatibility( array( $form_id ), $configuration );
 
 		return ! empty( $results[ $form_id ]['eligible'] );
 	}
@@ -312,14 +316,15 @@ final class EmailOctopusFieldMapper {
 	 * Build EmailOctopus `fields` payload from submitted Jetpack values.
 	 *
 	 * @param array<string,mixed> $all_values Submitted Jetpack values.
+	 * @param array<string,mixed> $field_map  Explicit profile field mapping.
 	 * @return array<string,string>
 	 */
-	public static function build_fields_payload( $all_values ) {
-		$field_map = Settings::get_emailoctopus_field_map();
+	public static function build_fields_payload( $all_values, $field_map ) {
+		$field_map = is_array( $field_map ) ? $field_map : array();
 		$payload   = array();
 
 		foreach ( $field_map as $tag => $mapping ) {
-			$source = (string) ( $mapping['source'] ?? '' );
+			$source = self::normalize_source_key( (string) ( $mapping['source'] ?? '' ) );
 
 			if ( '' === $source ) {
 				continue;
@@ -348,11 +353,12 @@ final class EmailOctopusFieldMapper {
 	 *
 	 * Uses only the explicitly configured source.
 	 *
-	 * @param array<string,mixed> $all_values Submitted Jetpack values.
+	 * @param array<string,mixed> $all_values   Submitted Jetpack values.
+	 * @param string              $email_source Explicit normalized source key.
 	 * @return string
 	 */
-	public static function get_email_address( $all_values ) {
-		$email_source = Settings::get_emailoctopus_email_source();
+	public static function get_email_address( $all_values, $email_source ) {
+		$email_source = self::normalize_source_key( $email_source );
 
 		if ( '' === $email_source ) {
 			return '';
@@ -371,7 +377,8 @@ final class EmailOctopusFieldMapper {
 	 * @return bool
 	 */
 	public static function has_truthy_submitted_value( $all_values, $source ) {
-		$value = self::get_submitted_value_raw( $all_values, $source );
+		$source = self::normalize_source_key( $source );
+		$value  = self::get_submitted_value_raw( $all_values, $source );
 
 		if ( null === $value ) {
 			return false;
@@ -413,7 +420,7 @@ final class EmailOctopusFieldMapper {
 	 * @return array<int,array<string,string>>
 	 */
 	private static function get_compatible_source_fields( $form_ids, $allowed_types, $type_family ) {
-		$form_ids = Settings::normalize_target_form_ids( $form_ids );
+		$form_ids = Settings::normalize_form_ids( $form_ids );
 		$form_ids = array_values(
 			array_filter(
 				$form_ids,
@@ -508,7 +515,7 @@ final class EmailOctopusFieldMapper {
 			}
 
 			foreach ( $form_ids as $form_id ) {
-				if ( '' !== IntegrationResolver::get_target_form_reason( $form_id, $form_ids ) ) {
+				if ( '' !== IntegrationResolver::get_target_form_reason( $form_id ) ) {
 					continue;
 				}
 

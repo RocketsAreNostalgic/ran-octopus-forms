@@ -91,7 +91,7 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Store_Test extends WP_UnitTestCase 
 
 		remove_filter( 'query', $filter );
 		$this->assertSame( array(), $queries );
-		$this->assertSame( Settings::get_empty_store(), get_option( Settings::OPTION_NAME ) );
+		$this->assertSame( Settings::get_empty_store(), Settings::get_store() );
 	}
 
 	/**

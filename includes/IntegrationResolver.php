@@ -201,6 +201,12 @@ final class IntegrationResolver {
 			return 'feedback_identity_unavailable';
 		}
 
+		$success_page = get_post( $profile->get_success_page_id() );
+
+		if ( ! $success_page instanceof \WP_Post || 'page' !== $success_page->post_type || 'publish' !== $success_page->post_status ) {
+			return 'success_destination_unavailable';
+		}
+
 		if ( '' === (string) ( $profile->get_configuration()['success_url'] ?? '' ) ) {
 			return 'success_destination_unavailable';
 		}
@@ -251,7 +257,13 @@ final class IntegrationResolver {
 			return false;
 		}
 
-		$compatibility = EmailOctopusFieldMapper::get_subscription_compatibility( array( absint( $form_id ) ), $profile->get_configuration() );
+		$configuration = $profile->get_configuration();
+
+		if ( '' === trim( (string) ( $configuration['emailoctopus_form_id'] ?? '' ) ) && '' === trim( (string) ( $configuration['emailoctopus_list_id'] ?? '' ) ) ) {
+			return false;
+		}
+
+		$compatibility = EmailOctopusFieldMapper::get_subscription_compatibility( $profile->get_form_ids(), $configuration );
 
 		return ! empty( $compatibility[ absint( $form_id ) ]['eligible'] );
 	}
