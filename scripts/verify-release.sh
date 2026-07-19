@@ -24,7 +24,7 @@ if ! cmp -s "$first_archive" "$second_archive"; then
 	exit 1
 fi
 
-if unzip -Z1 "$first_archive" | grep -Eq '/(OPTION-1-IMPLEMENTATION|ROADMAP)\.md$'; then
+if unzip -Z1 "$first_archive" | grep -Eq '/(OPTION-[0-9]+-IMPLEMENTATION|ROADMAP)\.md$'; then
 	echo 'Repository-only planning documents leaked into the release archive.' >&2
 	exit 1
 fi
