@@ -21,7 +21,6 @@ msgstr ""
 #: includes/Admin.php:48
 #: includes/Admin.php:49
 #: includes/Admin.php:203
-#: includes/HealthCheck.php:61
 msgid "RAN EmailOctopus for Jetpack Forms"
 msgstr ""
 
@@ -70,7 +69,10 @@ msgid "Every selected saved form shares this EmailOctopus destination, field map
 msgstr ""
 
 #: includes/Admin.php:220
-#: includes/HealthCheck.php:74
+#: includes/HealthCheck.php:261
+#: includes/HealthCheck.php:267
+#: includes/HealthCheck.php:271
+#: includes/HealthCheck.php:274
 msgid "Success page"
 msgstr ""
 
@@ -127,6 +129,9 @@ msgid "EmailOctopus is optional and is currently disabled. Add an EmailOctopus A
 msgstr ""
 
 #: includes/Admin.php:256
+#: includes/HealthCheck.php:288
+#: includes/HealthCheck.php:292
+#: includes/HealthCheck.php:298
 msgid "EmailOctopus destination"
 msgstr ""
 
@@ -135,8 +140,6 @@ msgid "Email address source"
 msgstr ""
 
 #: includes/Admin.php:264
-#: includes/HealthCheck.php:388
-#: includes/HealthCheck.php:391
 msgid "Newsletter opt-in source"
 msgstr ""
 
@@ -190,7 +193,7 @@ msgid "Isolated selected forms:"
 msgstr ""
 
 #: includes/Admin.php:448
-#: includes/HealthCheck.php:128
+#: includes/HealthCheck.php:313
 msgid "Untitled saved form"
 msgstr ""
 
@@ -453,7 +456,6 @@ msgstr ""
 
 #: includes/EmailOctopusApi.php:43
 #: includes/EmailOctopusApi.php:140
-#: includes/HealthCheck.php:60
 msgid "EmailOctopus API key is missing."
 msgstr ""
 
@@ -509,361 +511,327 @@ msgstr ""
 msgid "EmailOctopus returned an unexpected response."
 msgstr ""
 
-#: includes/HealthCheck.php:59
-msgid "Jetpack Forms"
+#: includes/HealthCheck.php:38
+#: includes/HealthCheck.php:77
+msgid "The integration profile no longer exists."
 msgstr ""
 
-#: includes/HealthCheck.php:59
-msgid "Jetpack Forms class is available."
+#: includes/HealthCheck.php:134
+msgid "Jetpack feedback identity"
 msgstr ""
 
-#: includes/HealthCheck.php:59
-msgid "Jetpack Forms is not available."
+#: includes/HealthCheck.php:136
+msgid "Jetpack can authoritatively identify the saved form behind a feedback submission."
 msgstr ""
 
-#: includes/HealthCheck.php:60
-#: includes/HealthCheck.php:231
+#: includes/HealthCheck.php:137
+msgid "Jetpack cannot authoritatively identify saved-form feedback. Profile routing is unavailable until Jetpack is updated."
+msgstr ""
+
+#: includes/HealthCheck.php:141
 msgid "EmailOctopus API key"
 msgstr ""
 
-#: includes/HealthCheck.php:60
-msgid "EmailOctopus API key is available."
+#: includes/HealthCheck.php:143
+msgid "The EmailOctopus API key is available."
 msgstr ""
 
-#: includes/HealthCheck.php:61
-msgid "RAN EmailOctopus for Jetpack Forms is loaded."
+#: includes/HealthCheck.php:144
+msgid "The EmailOctopus API key is missing. Jetpack routing can continue, but EmailOctopus subscriptions are disabled."
 msgstr ""
 
-#: includes/HealthCheck.php:61
-msgid "RAN EmailOctopus for Jetpack Forms is not loaded."
-msgstr ""
-
-#: includes/HealthCheck.php:88
-#: includes/HealthCheck.php:114
-msgid "Saved-form routing"
-msgstr ""
-
-#: includes/HealthCheck.php:88
-msgid "EmailOctopus routing is disabled because this Jetpack version cannot authoritatively identify a saved form after submission. Update Jetpack to a version that supports saved-form identity."
-msgstr ""
-
-#: includes/HealthCheck.php:94
-#: includes/HealthCheck.php:103
+#: includes/HealthCheck.php:165
 msgid "Selected saved forms"
 msgstr ""
 
-#: includes/HealthCheck.php:94
-msgid "No saved forms are selected. Select at least one published saved Jetpack form; EmailOctopus routing remains disabled until a target is valid."
-msgstr ""
-
-#. translators: %d: number of selected saved Jetpack forms.
-#: includes/HealthCheck.php:106
+#. translators: %d: number of selected forms.
+#: includes/HealthCheck.php:169
 #, php-format
-msgid "%d saved form is selected."
-msgid_plural "%d saved forms are selected."
+msgid "%d saved form is assigned to this profile."
+msgid_plural "%d saved forms are assigned to this profile."
 msgstr[0] ""
 msgstr[1] ""
 
-#. translators: 1: number of routable forms, 2: number of selected forms.
-#: includes/HealthCheck.php:117
-#, php-format
-msgid "%1$d of %2$d selected saved form(s) can be routed. Invalid forms are isolated and do not stop valid peers."
+#: includes/HealthCheck.php:172
+msgid "No saved forms are assigned. The profile is incomplete."
 msgstr ""
 
-#. translators: 1: saved Jetpack form title, 2: post ID.
-#: includes/HealthCheck.php:131
+#: includes/HealthCheck.php:230
+msgid "Routing coverage"
+msgstr ""
+
+#: includes/HealthCheck.php:233
+msgid "selected form(s) can receive profile routing"
+msgstr ""
+
+#: includes/HealthCheck.php:236
+msgid "Subscription coverage"
+msgstr ""
+
+#: includes/HealthCheck.php:239
+msgid "selected form(s) can send an EmailOctopus subscription"
+msgstr ""
+
+#: includes/HealthCheck.php:261
+msgid "No success page is selected. Save profile behaviour before routing can begin."
+msgstr ""
+
+#. translators: %d: missing page ID.
+#: includes/HealthCheck.php:267
 #, php-format
-msgid "Published saved form \"%1$s\" (#%2$d) is eligible for route-independent handling."
+msgid "Success page #%d is unavailable."
+msgstr ""
+
+#. translators: 1: page ID, 2: post status.
+#: includes/HealthCheck.php:271
+#, php-format
+msgid "Success destination #%1$d is not a published page (status: %2$s)."
+msgstr ""
+
+#. translators: %d: published page ID.
+#: includes/HealthCheck.php:274
+#, php-format
+msgid "Published success page #%d is available."
+msgstr ""
+
+#: includes/HealthCheck.php:288
+msgid "No EmailOctopus form or list is selected. Routing can continue, but subscriptions are not configured."
+msgstr ""
+
+#: includes/HealthCheck.php:292
+msgid "Both a form and a list resolve after filters. Configure exactly one destination."
+msgstr ""
+
+#: includes/HealthCheck.php:295
+msgid "list"
+msgstr ""
+
+#: includes/HealthCheck.php:295
+msgid "form"
+msgstr ""
+
+#. translators: 1: destination type, 2: provider resource ID.
+#: includes/HealthCheck.php:298
+#, php-format
+msgid "EmailOctopus %1$s \"%2$s\" is configured for this profile."
 msgstr ""
 
 #. translators: %d: saved Jetpack form ID.
-#: includes/HealthCheck.php:135
-#: includes/HealthCheck.php:141
+#: includes/HealthCheck.php:309
 #, php-format
 msgid "Saved Jetpack form #%d"
 msgstr ""
 
-#: includes/HealthCheck.php:163
-msgid "Contact form pattern"
+#. translators: %s: saved form title.
+#: includes/HealthCheck.php:315
+#, php-format
+msgid "Published saved form \"%s\" is structurally valid and routable."
 msgstr ""
 
-#: includes/HealthCheck.php:163
-msgid "Pattern is registered."
+#: includes/HealthCheck.php:319
+msgid "This form is assigned to more than one profile. Routing fails closed for this form only."
 msgstr ""
 
-#: includes/HealthCheck.php:163
-msgid "Pattern is not registered."
+#: includes/HealthCheck.php:320
+msgid "This form is owned by another profile. Routing fails closed for this form."
 msgstr ""
 
-#: includes/HealthCheck.php:164
-msgid "Pattern fields"
+#: includes/HealthCheck.php:321
+msgid "Jetpack cannot provide authoritative feedback identity for this saved form."
 msgstr ""
 
-#: includes/HealthCheck.php:164
-msgid "Pattern includes email and newsletter fields."
+#: includes/HealthCheck.php:322
+msgid "This profile does not have a valid published success page, so the form cannot be routed."
 msgstr ""
 
-#: includes/HealthCheck.php:164
-msgid "Pattern is missing an email field or checkbox/consent field."
+#: includes/HealthCheck.php:323
+msgid "The selected saved form was deleted or is unavailable. Its stored ID is preserved until an administrator removes it."
 msgstr ""
 
-#: includes/HealthCheck.php:179
-msgid "Saved form field mapping"
+#: includes/HealthCheck.php:324
+msgid "The selected post is not a saved Jetpack form. Its stored ID is preserved for repair or removal."
 msgstr ""
 
-#: includes/HealthCheck.php:179
-msgid "Field mapping cannot be checked until at least one selected saved form is routable. Jetpack notifications remain independent; EmailOctopus routing is disabled."
+#: includes/HealthCheck.php:325
+msgid "The selected saved Jetpack form is not published. Publish it or remove it from this profile."
 msgstr ""
 
-#: includes/HealthCheck.php:196
-msgid "Shared saved-form fields"
+#: includes/HealthCheck.php:326
+msgid "The selected saved form must contain exactly one Jetpack contact-form block."
 msgstr ""
 
-#: includes/HealthCheck.php:196
-msgid "Field discovery found unambiguous fields with matching types across every routable selected form."
+#: includes/HealthCheck.php:329
+msgid "The selected saved form is unavailable for profile routing."
 msgstr ""
 
-#: includes/HealthCheck.php:196
-msgid "No unambiguous Jetpack fields with matching types are shared by every routable selected form."
+#: includes/HealthCheck.php:341
+#: includes/HealthCheck.php:350
+msgid "Shared field compatibility"
 msgstr ""
 
-#: includes/HealthCheck.php:197
-msgid "Shared email fields"
+#: includes/HealthCheck.php:341
+msgid "Shared fields cannot be evaluated until at least one selected form is routable."
 msgstr ""
 
-#: includes/HealthCheck.php:197
-msgid "Every routable selected form shares at least one compatible email field."
+#. translators: %d: compatible shared fields.
+#: includes/HealthCheck.php:350
+#, php-format
+msgid "%d unambiguous field(s) share the same normalized key and type across every routable form."
 msgstr ""
 
-#: includes/HealthCheck.php:197
-msgid "The routable selected forms do not share an unambiguous email field with the same normalized key and type."
+#. translators: %d: compatible shared fields.
+#: includes/HealthCheck.php:350
+msgid "The routable forms do not share an unambiguous field with the same key and type."
 msgstr ""
 
-#. translators: %d: saved Jetpack form ID.
-#: includes/HealthCheck.php:204
-#: includes/HealthCheck.php:210
+#. translators: %d: compatible shared fields.
+#: includes/HealthCheck.php:351
+msgid "Shared email source choices"
+msgstr ""
+
+#. translators: %d: compatible shared fields.
+#: includes/HealthCheck.php:351
+msgid "At least one compatible email field is shared across every routable form."
+msgstr ""
+
+#. translators: %d: compatible shared fields.
+#: includes/HealthCheck.php:351
+msgid "No compatible email field is shared across every routable form."
+msgstr ""
+
+#: includes/HealthCheck.php:352
+msgid "Shared consent source choices"
+msgstr ""
+
+#: includes/HealthCheck.php:352
+msgid "At least one compatible checkbox or consent field is shared across every routable form."
+msgstr ""
+
+#: includes/HealthCheck.php:352
+msgid "No compatible checkbox or consent field is shared across every routable form."
+msgstr ""
+
+#: includes/HealthCheck.php:368
+msgid "Email source"
+msgstr ""
+
+#: includes/HealthCheck.php:372
+msgid "Consent source"
+msgstr ""
+
+#. translators: %s: EmailOctopus field tag.
+#: includes/HealthCheck.php:383
+#, php-format
+msgid "Custom source for %s"
+msgstr ""
+
+#. translators: %s: configured source key.
+#: includes/HealthCheck.php:418
+#, php-format
+msgid "Configured source \"%s\" is compatible with every routable form in this profile."
+msgstr ""
+
+#. translators: %s: comma-separated form IDs.
+#: includes/HealthCheck.php:423
+#, php-format
+msgid "No source is configured. Affected saved form(s): %s."
+msgstr ""
+
+#. translators: 1: source key, 2: comma-separated form IDs.
+#: includes/HealthCheck.php:424
+#, php-format
+msgid "Configured source \"%1$s\" is missing, ambiguous, or type-incompatible on saved form(s): %2$s."
+msgstr ""
+
+#. translators: %d: saved form ID.
+#: includes/HealthCheck.php:431
+#: includes/HealthCheck.php:435
 #, php-format
 msgid "Subscription mapping for form #%d"
 msgstr ""
 
-#. translators: %d: saved Jetpack form ID.
-#: includes/HealthCheck.php:204
-msgid "Every configured source is present, unambiguous, and type-compatible on this form."
+#. translators: %d: saved form ID.
+#: includes/HealthCheck.php:431
+msgid "Every configured source is present, unambiguous, and type-compatible."
 msgstr ""
 
-#: includes/HealthCheck.php:215
-msgid "Redirect hook"
+#: includes/HealthCheck.php:455
+#: includes/HealthCheck.php:462
+#: includes/HealthCheck.php:469
+#: includes/HealthCheck.php:481
+#: includes/HealthCheck.php:489
+#: includes/HealthCheck.php:501
+#: includes/HealthCheck.php:509
+msgid "EmailOctopus provider reachability"
 msgstr ""
 
-#: includes/HealthCheck.php:215
-msgid "Saved-form redirect hook is registered."
+#: includes/HealthCheck.php:455
+msgid "Provider reachability was not tested because the API key is missing."
 msgstr ""
 
-#: includes/HealthCheck.php:215
-msgid "Saved-form redirect hook is missing."
+#: includes/HealthCheck.php:462
+msgid "Provider reachability was not tested because this profile has no destination."
 msgstr ""
 
-#: includes/HealthCheck.php:231
-msgid "API key is present."
+#: includes/HealthCheck.php:469
+msgid "Provider reachability was not tested because the effective destination is ambiguous."
 msgstr ""
 
-#: includes/HealthCheck.php:231
-msgid "API key is missing."
-msgstr ""
-
-#: includes/HealthCheck.php:234
-#: includes/HealthCheck.php:254
-msgid "EmailOctopus form/list"
-msgstr ""
-
-#: includes/HealthCheck.php:234
-msgid "Cannot check form or list without an API key."
-msgstr ""
-
-#: includes/HealthCheck.php:239
-#: includes/HealthCheck.php:244
-#: includes/HealthCheck.php:248
+#: includes/HealthCheck.php:486
 msgid "EmailOctopus form"
 msgstr ""
 
-#: includes/HealthCheck.php:239
-msgid "Direct list override is selected."
+#: includes/HealthCheck.php:486
+msgid "The configured EmailOctopus form resolves through the provider API."
 msgstr ""
 
-#: includes/HealthCheck.php:248
-msgid "Selected form resolves through the API."
+#: includes/HealthCheck.php:489
+msgid "The configured EmailOctopus form did not resolve to a list."
 msgstr ""
 
-#: includes/HealthCheck.php:254
-msgid "Select an EmailOctopus form or direct list override."
+#: includes/HealthCheck.php:509
+msgid "The configured EmailOctopus list resolves through the provider API."
 msgstr ""
 
-#: includes/HealthCheck.php:258
-#: includes/HealthCheck.php:264
-msgid "EmailOctopus list"
-msgstr ""
-
-#: includes/HealthCheck.php:258
-msgid "Could not resolve a list ID."
-msgstr ""
-
-#: includes/HealthCheck.php:264
-msgid "Configured list resolves through the API."
-msgstr ""
-
-#: includes/HealthCheck.php:313
-msgid "Page does not exist."
-msgstr ""
-
-#. translators: %s: WordPress page status.
-#: includes/HealthCheck.php:317
-#, php-format
-msgid "Page status: %s."
-msgstr ""
-
-#: includes/HealthCheck.php:340
-msgid "This form is isolated; valid selected peers remain active."
-msgstr ""
-
-#: includes/HealthCheck.php:341
-msgid "EmailOctopus routing is disabled because no valid selected peer remains."
-msgstr ""
-
-#. translators: %d: missing saved Jetpack form ID.
-#: includes/HealthCheck.php:346
-#, php-format
-msgid "Saved form #%d was deleted or is unavailable. Clear it or restore the saved form. "
-msgstr ""
-
-#. translators: %d: selected WordPress post ID.
-#: includes/HealthCheck.php:349
-#, php-format
-msgid "Target #%d is not a jetpack_form post. Clear it or select a saved Jetpack form. "
-msgstr ""
-
-#: includes/HealthCheck.php:352
-msgid "unknown"
-msgstr ""
-
-#. translators: 1: selected saved Jetpack form ID, 2: WordPress post status.
-#: includes/HealthCheck.php:355
-#, php-format
-msgid "Saved form #%1$d has status \"%2$s\". Publish it or clear the selection. "
-msgstr ""
-
-#. translators: %d: selected saved Jetpack form ID.
-#: includes/HealthCheck.php:358
-#, php-format
-msgid "Saved form #%d does not contain exactly one Jetpack contact form. Repair its structure or clear the selection. "
-msgstr ""
-
-#: includes/HealthCheck.php:360
-msgid "The selected saved Jetpack form is unavailable for EmailOctopus routing. "
-msgstr ""
-
-#: includes/HealthCheck.php:373
-#: includes/HealthCheck.php:376
-msgid "Email source mapping"
-msgstr ""
-
-#: includes/HealthCheck.php:373
-msgid "No email source is configured. Select a current email field in RAN EmailOctopus for Jetpack Forms settings."
-msgstr ""
-
-#: includes/HealthCheck.php:388
-msgid "No newsletter opt-in source is configured. Select a current checkbox or consent field in RAN EmailOctopus for Jetpack Forms settings."
-msgstr ""
-
-#. translators: %s: selected Jetpack contact-form field label.
-#: includes/HealthCheck.php:427
-#, php-format
-msgid "Configured source \"%s\" is compatible across every routable selected form."
-msgstr ""
-
-#. translators: 1: configured source key, 2: comma-separated saved form IDs.
-#: includes/HealthCheck.php:435
-#, php-format
-msgid "Configured source \"%1$s\" is missing, ambiguous, or type-incompatible on saved form(s) %2$s. Those forms cannot send EmailOctopus subscriptions; compatible peers remain active."
-msgstr ""
-
-#. translators: %s: configured Jetpack source key.
-#: includes/HealthCheck.php:467
+#. translators: %s: source key.
+#: includes/HealthCheck.php:537
 #, php-format
 msgid "source \"%s\" is missing"
 msgstr ""
 
-#. translators: %s: configured Jetpack source key.
-#: includes/HealthCheck.php:470
+#. translators: %s: source key.
+#: includes/HealthCheck.php:539
 #, php-format
 msgid "source \"%s\" is ambiguous"
 msgstr ""
 
-#. translators: 1: configured Jetpack source key, 2: expected field type, 3: actual field type.
-#: includes/HealthCheck.php:476
-#, php-format
-msgid "source \"%1$s\" expects %2$s but is %3$s"
-msgstr ""
-
-#: includes/HealthCheck.php:478
-msgid "a compatible type"
-msgstr ""
-
-#: includes/HealthCheck.php:479
-msgid "another type"
-msgstr ""
-
-#. translators: %s: configured Jetpack source key.
-#: includes/HealthCheck.php:483
-#, php-format
-msgid "source \"%s\" is incompatible"
-msgstr ""
-
-#: includes/HealthCheck.php:489
-msgid "the configured subscription mapping is incomplete"
-msgstr ""
-
-#. translators: %s: semicolon-separated mapping failure descriptions.
-#: includes/HealthCheck.php:494
-#, php-format
-msgid "EmailOctopus is skipped for this form because %s."
-msgstr ""
-
-#: includes/HealthCheck.php:499
-msgid "Other compatible selected forms remain active."
-msgstr ""
-
-#: includes/HealthCheck.php:500
-msgid "No selected form can currently subscribe to EmailOctopus."
-msgstr ""
-
-#. translators: %d: number of mapped EmailOctopus custom fields.
-#: includes/HealthCheck.php:536
-#: includes/HealthCheck.php:541
-#: includes/HealthCheck.php:547
-#: includes/HealthCheck.php:560
-msgid "EmailOctopus field mapping"
-msgstr ""
-
-#: includes/HealthCheck.php:536
-msgid "Selected list does not expose custom fields beyond the email address field that RAN EmailOctopus for Jetpack Forms submits."
-msgstr ""
-
-#. translators: %d: number of mapped EmailOctopus custom fields.
+#. translators: %s: source key.
 #: includes/HealthCheck.php:541
 #, php-format
-msgid "All %d EmailOctopus custom field(s) are mapped to detected Jetpack fields."
+msgid "source \"%s\" has an incompatible field type"
 msgstr ""
 
-#. translators: 1: number of mapped fields, 2: number of invalid fields, 3: comma-separated example field names.
-#: includes/HealthCheck.php:550
+#. translators: %s: diagnostic reason code.
+#: includes/HealthCheck.php:548
 #, php-format
-msgid "%1$d custom field(s) are mapped, but %2$d mapping(s) point to Jetpack fields that were not detected on the active integration form: %3$s."
+msgid "EmailOctopus is skipped because routing is unavailable (%s)."
 msgstr ""
 
-#. translators: 1: number of mapped fields, 2: number of custom fields, 3: comma-separated example field names.
-#: includes/HealthCheck.php:563
+#. translators: %s: diagnostic reason code.
+#: includes/HealthCheck.php:549
+msgid "EmailOctopus is skipped because the configured mapping is incomplete."
+msgstr ""
+
+#. translators: %s: semicolon-separated failure descriptions.
+#: includes/HealthCheck.php:552
 #, php-format
-msgid "%1$d of %2$d EmailOctopus custom field(s) are mapped. Only mapped fields and email_address are submitted; unmapped fields include: %3$s."
+msgid "EmailOctopus is skipped because %s."
+msgstr ""
+
+#. translators: 1: active count, 2: selected count, 3: coverage description.
+#: includes/HealthCheck.php:603
+#, php-format
+msgid "%1$d of %2$d %3$s."
 msgstr ""
 
 #: includes/OptionMutex.php:80
