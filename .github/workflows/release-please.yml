@@ -88,7 +88,7 @@ jobs:
               with:
                   php-version: '8.3'
                   extensions: zip
-                  tools: composer:v2
+                  tools: composer:v2, wp-cli
                   coverage: none
 
             - name: Install release dependencies
