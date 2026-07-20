@@ -3,9 +3,9 @@
 set -eu
 
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-output=${1:-"$root/dist"}
+output_directory=${1:-"$root/dist"}
 slug=ran-emailoctopus-jetpack-forms
-archive=$(sh "$root/scripts/release-archive-path.sh" "$output")
+archive=$(sh "$root/scripts/release-archive-path.sh" "$output_directory")
 stage=$(mktemp -d)
 
 cleanup() {
@@ -19,7 +19,7 @@ if [ -e "$archive" ]; then
 	exit 1
 fi
 
-mkdir -p "$output" "$stage/$slug"
+mkdir -p "$output_directory" "$stage/$slug"
 cd "$root"
 
 pnpm check

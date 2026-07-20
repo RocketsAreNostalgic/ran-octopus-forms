@@ -38,7 +38,9 @@
 		"lint:php": "composer run phpcs",
 		"test:php": "composer run test",
 		"release": "sh scripts/build-release.sh",
-		"release:verify": "sh scripts/verify-release.sh"
+		"release:verify": "sh scripts/verify-release.sh",
+		"release:assets": "sh scripts/create-release-assets.sh",
+		"release:deploy": "sh scripts/deploy-wordpress-org.sh"
 	},
 	"prettier": {
 		"useTabs": true,

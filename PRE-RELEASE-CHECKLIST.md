@@ -24,17 +24,20 @@ normal release steps.
       including tags, Jetpack/EmailOctopus external-service
       disclosures, the Release Please-managed stable tag, screenshots, and the declared
       `Tested up to` value.
-- [ ] Run the full local release gate from a clean worktree:
+- [ ] Run the full local release gate from a clean work tree:
 
 ```sh
 pnpm install --frozen-lockfile
 composer install
 pnpm check
-pnpm make-pot
+pnpm run check:generated
 composer run phpcs
-WP_TESTS_DIR=/path/to/wordpress-tests-lib composer test
-pnpm release
+pnpm run release:verify
+pnpm run release:assets
 ```
+
+- [ ] Confirm routine deployment remains disabled in `wordpress-org/deployment.json` until the WordPress.org slug is assigned and the first approved submission is complete.
+- [ ] Confirm the protected deployment workflow downloads the GitHub release assets before SVN staging and that `/assets` sync is only used deliberately.
 
 - [ ] Run Plugin Check against the unpacked release ZIP, matching the
       `.github/workflows/quality.yml` release job.
@@ -42,7 +45,7 @@ pnpm release
       and verify activation, pattern insertion, zero-profile state, profile
       creation, both editor stages, multiple assigned forms beside an unassigned
       form, profile/form signed context, profile-specific success redirects and
-      messages, normal Jetpack submission behaviour, and profile deletion.
+      messages, normal Jetpack submission behavior, and profile deletion.
 - [ ] Verify conflict-safe administration in two browser tabs: different-profile
       saves preserve each other; a stale same-profile save is rejected with its
       submitted values available for review; an active lock produces a retry
@@ -80,8 +83,8 @@ pnpm release
 - [ ] Confirm the POT file has no stale source references and is committed with
       the release.
 - [ ] Do not bundle `.po` or `.mo` files unless they are reviewed,
-      release-ready translations. WordPress.org translations should normally be
-      handled through translate.wordpress.org after approval.
+      release-ready translations. Translators should normally handle release
+      strings through the official translation workflow after approval.
 - [ ] Treat launch translations as optional. Only add `.po` and `.mo` files if
       a fluent reviewer has approved them and there is a specific release reason
       to ship them before WordPress.org language packs exist.

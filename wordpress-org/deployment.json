@@ -1,0 +1,11 @@
+{
+	"schemaVersion": 1,
+	"enabled": false,
+	"wordpressOrgSlug": "",
+	"packageSlug": "ran-emailoctopus-jetpack-forms",
+	"mainPluginFile": "ran-emailoctopus-jetpack-forms.php",
+	"buildCommand": "sh scripts/build-release.sh \"$OUTPUT_DIRECTORY\"",
+	"verifyCommand": "sh scripts/verify-release.sh",
+	"archivePath": "dist/ran-emailoctopus-jetpack-forms-{version}.zip",
+	"listingAssetsDirectory": "wordpress-org/assets"
+}

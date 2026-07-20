@@ -4,11 +4,24 @@ on:
     push:
         branches:
             - main
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Existing vX.Y.Z GitHub release tag to rebuild
+                required: true
+                type: string
+            deploy:
+                description: Request a protected WordPress.org deployment
+                required: true
+                default: false
+                type: boolean
+            sync_assets:
+                description: Deliberately sync listing artwork to SVN /assets
+                required: true
+                default: false
+                type: boolean
 
-permissions:
-    contents: write
-    issues: write
-    pull-requests: write
+permissions: {}
 
 concurrency:
     group: release-please-main
@@ -16,10 +29,151 @@ concurrency:
 
 jobs:
     release-please:
-        runs-on: ubuntu-latest
+        name: Release Please
+        if: github.event_name == 'push'
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+            issues: write
+            pull-requests: write
+        outputs:
+            release_created: ${{ steps.release.outputs.release_created }}
+            tag_name: ${{ steps.release.outputs.tag_name }}
+            version: ${{ steps.release.outputs.version }}
         steps:
-            - uses: googleapis/release-please-action@v4
+            - name: Open or update the release pull request
+              id: release
+              uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   config-file: release-please-config.json
                   manifest-file: .release-please-manifest.json
+
+    package-release:
+        name: Package release
+        needs: release-please
+        if: >-
+            always() &&
+            (
+              needs.release-please.outputs.release_created == 'true' ||
+              github.event_name == 'workflow_dispatch'
+            )
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+        outputs:
+            deployment_enabled: ${{ steps.contract.outputs.enabled }}
+            tag_name: ${{ steps.release.outputs.tag_name }}
+        env:
+            TAG_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || needs.release-please.outputs.tag_name }}
+        steps:
+            - name: Check out the exact release tag
+              uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+              with:
+                  persist-credentials: false
+                  ref: ${{ env.TAG_NAME }}
+
+            - name: Set up Node.js
+              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+              with:
+                  node-version: 22
+
+            - name: Set up pnpm
+              uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+              with:
+                  version: 11.5.2
+
+            - name: Set up PHP
+              uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+              with:
+                  php-version: '8.3'
+                  extensions: zip
+                  tools: composer:v2
+                  coverage: none
+
+            - name: Install release dependencies
+              run: |
+                  pnpm install --frozen-lockfile
+                  composer install --no-interaction --prefer-dist
+
+            - name: Run release quality gates
+              run: |
+                  pnpm check
+                                    pnpm run check:generated
+                  composer run phpcs
+                                    pnpm run release:verify
+
+            - name: Build verified release assets
+              id: release
+              run: |
+                  bash scripts/create-release-assets.sh "${TAG_NAME}"
+                  version="${TAG_NAME#v}"
+                  echo "tag_name=${TAG_NAME}" >> "${GITHUB_OUTPUT}"
+                  echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+            - name: Read deployment contract
+              id: contract
+              run: echo "enabled=$(jq -r '.enabled' wordpress-org/deployment.json)" >> "${GITHUB_OUTPUT}"
+
+            - name: Attach verified assets to the GitHub release
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  version="${TAG_NAME#v}"
+                  gh release upload "${TAG_NAME}" \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.zip" \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.zip.sha256" \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.manifest.json" \
+                      --clobber \
+                      --repo "${GITHUB_REPOSITORY}"
+
+    deploy-wordpress-org:
+        name: Deploy to WordPress.org
+        needs: package-release
+        if: >-
+            needs.package-release.result == 'success' &&
+            (
+              (github.event_name == 'push' && needs.package-release.outputs.deployment_enabled == 'true') ||
+              (github.event_name == 'workflow_dispatch' && inputs.deploy)
+            )
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+        environment: wordpress-org
+        env:
+            TAG_NAME: ${{ needs.package-release.outputs.tag_name }}
+            WORDPRESS_ORG_USERNAME: ${{ secrets.WORDPRESS_ORG_USERNAME }}
+            WORDPRESS_ORG_PASSWORD: ${{ secrets.WORDPRESS_ORG_PASSWORD }}
+        steps:
+            - name: Check out the exact release tag
+              uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+              with:
+                  persist-credentials: false
+                  ref: ${{ env.TAG_NAME }}
+
+            - name: Download canonical GitHub release assets
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  version="${TAG_NAME#v}"
+                  mkdir -p dist
+                  gh release download "${TAG_NAME}" \
+                      --pattern "ran-emailoctopus-jetpack-forms-${version}.*" \
+                      --dir dist \
+                      --repo "${GITHUB_REPOSITORY}"
+
+            - name: Deploy verified release to protected SVN
+              run: |
+                  version="${TAG_NAME#v}"
+                  options=()
+                  if [[ "${{ github.event_name }}" == 'workflow_dispatch' ]]; then
+                      options+=(--allow-disabled)
+                  fi
+                  if [[ "${{ github.event_name }}" == 'workflow_dispatch' && "${{ inputs.sync_assets }}" == 'true' ]]; then
+                      options+=(--sync-assets)
+                  fi
+                  bash scripts/deploy-wordpress-org.sh \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.zip" \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.zip.sha256" \
+                      "dist/ran-emailoctopus-jetpack-forms-${version}.manifest.json" \
+                      "${options[@]}"
