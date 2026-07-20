@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v2.0.0...v2.1.0) (2026-07-20)
+
+
+### Features
+
+* add wp-cli to tools in release workflow ([0d6a92d](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/0d6a92d3c2fd22a201fddd26ec4030d56345e3eb))
+
 ## [2.0.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v1.1.0...v2.0.0) (2026-07-20)
 
 
