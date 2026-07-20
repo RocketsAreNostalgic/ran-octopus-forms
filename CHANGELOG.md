@@ -1,5 +1,42 @@
 # Changelog
 
+## [2.0.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v1.1.0...v2.0.0) (2026-07-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove transitional target-form helper aliases and retain only profile-aware configuration contracts.
+* replace the shared Settings API form with independent profile editors and revision-safe admin-post handlers.
+* Remove legacy runtime identifiers and shortcode aliases; every integration submission and outcome now resolves an immutable profile and exact saved-form identity.
+* Replace the shared flat settings schema with independent revisioned integration profiles and remove legacy settings migration.
+
+### Features
+
+* add conflict-safe profile administration ([8d57b34](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/8d57b34ba59307dbc35f7e676535c820e4444ef4))
+* add per-profile health diagnostics ([7f80cb8](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/7f80cb8e0ff4103ebfde97fb8bb14be9edd3cf03))
+* make form runtime profile-explicit ([c4f0deb](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/c4f0debbee84c90adb201f8870df28bcc710b147))
+* replace flat settings with integration profiles ([19ec48f](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/19ec48f7b7a2617724e787c35913bf356e763b42))
+* standardize GitHub-backed WordPress.org releases ([95db9e4](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/95db9e42ba40cf0e5bb470372719d172616fe8db))
+* support multiple saved forms ([c1196eb](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/c1196ebfec56167041d01df908bcbbc588e2446d))
+* support portable saved Jetpack forms ([2ffa194](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/2ffa19415069dc1a47f6a22ee955192eb21244d3))
+
+
+### Bug Fixes
+
+* add profile editor overview navigation ([5d4edd0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/5d4edd0bee8d08248a59f55ed88876840e57d28c))
+* clarify isolated form notices ([437e38f](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/437e38f715fbbd6ac917f7093f69614dfce5292d))
+* render profile delete confirmation ([bf5ed11](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/bf5ed1185b71f757117bc3556f0fa5a4a62df93a))
+
+
+### Miscellaneous Chores
+
+* prepare profile release tooling and guidance ([e81f23f](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/e81f23fd9bf92e907ffd985b5020a09e0ca82291))
+
+
+### Code Refactoring
+
+* finalize profile-explicit public contracts ([8e94261](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/8e94261f8bd980e5aefb23632f018e7d0a040ff1))
+
 ## 2.0.0 (unreleased)
 
 - Replaced the shared configuration with independent integration profiles keyed

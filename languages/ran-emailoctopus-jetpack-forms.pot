@@ -3,7 +3,7 @@
 msgid ""
 msgstr ""
 "X-Release-Please-Start: x-release-please-start-version\n"
-"Project-Id-Version: RAN EmailOctopus for Jetpack Forms 1.1.0\n"
+"Project-Id-Version: RAN EmailOctopus for Jetpack Forms 2.0.0\n"
 "X-Release-Please-End: x-release-please-end\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/ran-emailoctopus-jetpack-forms\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
