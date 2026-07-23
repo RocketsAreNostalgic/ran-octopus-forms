@@ -282,6 +282,43 @@ class RAN_EmailOctopus_Jetpack_Forms_Profile_Admin_Workflows_Test extends WP_Uni
 		$this->assertStringContainsString( 'Unavailable selected form #999999', $markup );
 	}
 
+	/** Saved-form choices identify the current page and draft post placements. */
+	public function test_identity_editor_shows_saved_form_placement_context() {
+		$form_id        = $this->create_saved_form( 'Contact form' );
+		$unused_form_id = $this->create_saved_form( 'Unused form' );
+		$reference      = '<!-- wp:group --><div><!-- wp:jetpack/contact-form {"ref":' . $form_id . '} /--></div><!-- /wp:group -->';
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => 'Contact Us',
+				'post_content' => $reference,
+			)
+		);
+		self::factory()->post->create(
+			array(
+				'post_type'    => 'post',
+				'post_status'  => 'draft',
+				'post_title'   => 'Newsletter draft',
+				'post_content' => '[contact-form ref="' . $form_id . '"]',
+			)
+		);
+		$_GET = array(
+			'page' => Admin::PAGE_SLUG,
+			'view' => 'create',
+		);
+
+		ob_start();
+		Admin::render_page();
+		$markup = ob_get_clean();
+
+		$this->assertStringContainsString( 'Used on:', $markup );
+		$this->assertStringContainsString( 'Contact Us (Page, Published)', $markup );
+		$this->assertStringContainsString( 'Newsletter draft (Post, Draft)', $markup );
+		$this->assertStringContainsString( 'value="' . $unused_form_id . '"', $markup );
+		$this->assertStringContainsString( 'not currently used in published, scheduled, private, pending, or draft content.', $markup );
+	}
+
 	/** Step-two source choices use only the persisted common field intersection. */
 	public function test_behaviour_editor_uses_persisted_common_fields() {
 		$first  = $this->create_saved_form( 'First', true );

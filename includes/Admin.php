@@ -81,6 +81,7 @@ final class Admin {
 				.ran-emailoctopus-jetpack-forms-admin fieldset { margin: 0 0 24px; }
 				.ran-emailoctopus-jetpack-forms-admin legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
 				.ran-emailoctopus-jetpack-forms-admin .ran-form-choice { display: block; margin: 8px 0; }
+				.ran-emailoctopus-jetpack-forms-admin .ran-form-locations { list-style: disc; margin: 4px 0 8px 28px; }
 				.ran-emailoctopus-jetpack-forms-admin .ran-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 				.ran-emailoctopus-jetpack-forms-admin .ran-health-pass { color: #008a20; }
 				.ran-emailoctopus-jetpack-forms-admin .ran-health-error { color: #b32d2e; }
@@ -477,7 +478,7 @@ final class Admin {
 
 	/** Render all published forms plus unavailable selected rows. */
 	private static function render_saved_form_choices( $profile_id, $selected ) {
-		$forms  = get_posts(
+		$forms             = get_posts(
 			array(
 				'post_type'   => 'jetpack_form',
 				'post_status' => 'publish',
@@ -486,8 +487,9 @@ final class Admin {
 				'order'       => 'ASC',
 			)
 		);
-		$owners = array();
-		$seen   = array();
+		$owners            = array();
+		$seen              = array();
+		$locations_by_form = self::get_saved_form_locations( wp_list_pluck( $forms, 'ID' ) );
 
 		foreach ( IntegrationResolver::get_profiles() as $other ) {
 			foreach ( $other->get_form_ids() as $form_id ) {
@@ -509,14 +511,17 @@ final class Admin {
 				$disabled = is_array( $owner ) && $owner['id'] !== $profile_id;
 				$label    = '' !== trim( (string) $form->post_title ) ? $form->post_title : __( 'Untitled saved form', 'ran-emailoctopus-jetpack-forms' );
 				?>
-				<label class="ran-form-choice">
+				<div class="ran-form-choice">
+					<label>
 					<input name="profile[form_ids][]" type="checkbox" value="<?php echo esc_attr( $form_id ); ?>" <?php checked( in_array( $form_id, $selected, true ) ); ?> <?php disabled( $disabled ); ?> />
 					<?php echo esc_html( sprintf( '%s (#%d)', $label, $form_id ) ); ?>
 					<?php
 					if ( $disabled ) :
 						?>
 						<span class="description"><?php echo esc_html( sprintf( /* translators: %s: owning profile label. */ __( ' — assigned to %s', 'ran-emailoctopus-jetpack-forms' ), $owner['label'] ) ); ?></span><?php endif; ?>
-				</label>
+					</label>
+					<?php self::render_saved_form_locations( $locations_by_form[ $form_id ] ?? array() ); ?>
+				</div>
 			<?php endforeach; ?>
 			<?php foreach ( array_diff( $selected, $seen ) as $form_id ) : ?>
 				<label class="ran-form-choice"><input checked name="profile[form_ids][]" type="checkbox" value="<?php echo esc_attr( $form_id ); ?>" /> <?php echo esc_html( sprintf( /* translators: %d: unavailable stored form ID. */ __( 'Unavailable selected form #%d — uncheck to remove', 'ran-emailoctopus-jetpack-forms' ), $form_id ) ); ?></label>
@@ -527,6 +532,147 @@ final class Admin {
 				<p><?php esc_html_e( 'No published saved Jetpack forms are available.', 'ran-emailoctopus-jetpack-forms' ); ?></p><?php endif; ?>
 		</fieldset>
 		<?php
+	}
+
+	/**
+	 * Render the editable content that references one saved form.
+	 *
+	 * @param array<int,array{label:string,url:string}> $locations Form locations.
+	 * @return void
+	 */
+	private static function render_saved_form_locations( $locations ) {
+		if ( empty( $locations ) ) {
+			?>
+			<span class="description"><?php esc_html_e( ' — not currently used in published, scheduled, private, pending, or draft content.', 'ran-emailoctopus-jetpack-forms' ); ?></span>
+			<?php
+			return;
+		}
+		?>
+		<span class="description"><?php esc_html_e( 'Used on:', 'ran-emailoctopus-jetpack-forms' ); ?></span>
+		<ul class="ran-form-locations">
+			<?php foreach ( $locations as $location ) : ?>
+				<li>
+					<?php if ( '' !== $location['url'] ) : ?>
+						<a href="<?php echo esc_url( $location['url'] ); ?>"><?php echo esc_html( $location['label'] ); ?></a>
+					<?php else : ?>
+						<?php echo esc_html( $location['label'] ); ?>
+					<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+		<?php
+	}
+
+	/**
+	 * Find content that directly references the supplied saved Jetpack forms.
+	 *
+	 * @param array<int,int|string> $form_ids Saved form IDs.
+	 * @return array<int,array<int,array{label:string,url:string}>> Locations by saved form ID.
+	 */
+	private static function get_saved_form_locations( $form_ids ) {
+		$form_ids = Settings::normalize_form_ids( $form_ids );
+
+		if ( empty( $form_ids ) ) {
+			return array();
+		}
+
+		$wanted = array_fill_keys( $form_ids, true );
+		$found  = array();
+
+		global $wpdb;
+		$post_ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type != %s AND post_status IN ('publish', 'future', 'draft', 'pending', 'private') AND ( post_content LIKE %s OR post_content LIKE %s ) ORDER BY post_type ASC, post_title ASC, ID ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Core posts table name is trusted.
+				'jetpack_form',
+				'%' . $wpdb->esc_like( '"ref":' ) . '%',
+				'%' . $wpdb->esc_like( '[contact-form' ) . '%'
+			)
+		);
+
+		foreach ( $post_ids as $post_id ) {
+			$post = get_post( $post_id );
+
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+
+			$referenced = array();
+			foreach ( parse_blocks( (string) $post->post_content ) as $block ) {
+				self::collect_saved_form_references( $block, $wanted, $referenced );
+			}
+			self::collect_saved_form_shortcode_references( (string) $post->post_content, $wanted, $referenced );
+
+			if ( empty( $referenced ) ) {
+				continue;
+			}
+
+			$post_type = get_post_type_object( $post->post_type );
+			$status    = get_post_status_object( $post->post_status );
+			$title     = '' !== trim( (string) $post->post_title ) ? $post->post_title : __( 'Untitled content', 'ran-emailoctopus-jetpack-forms' );
+			$label     = sprintf(
+				/* translators: 1: content title, 2: content type, 3: content status. */
+				__( '%1$s (%2$s, %3$s)', 'ran-emailoctopus-jetpack-forms' ),
+				$title,
+				$post_type ? $post_type->labels->singular_name : $post->post_type,
+				$status ? $status->label : $post->post_status
+			);
+
+			foreach ( array_keys( $referenced ) as $form_id ) {
+				$found[ $form_id ][] = array(
+					'label' => $label,
+					'url'   => (string) get_edit_post_link( $post->ID, '' ),
+				);
+			}
+		}
+
+		return $found;
+	}
+
+	/**
+	 * Collect saved form IDs from nested Jetpack contact-form blocks.
+	 *
+	 * @param array<string,mixed> $block      Parsed block data.
+	 * @param array<int,bool>     $wanted     Form IDs being displayed.
+	 * @param array<int,bool>     $referenced Referenced form IDs.
+	 * @return void
+	 */
+	private static function collect_saved_form_references( $block, $wanted, &$referenced ) {
+		if ( 'jetpack/contact-form' === (string) ( $block['blockName'] ?? '' ) ) {
+			$form_id = absint( $block['attrs']['ref'] ?? 0 );
+
+			if ( isset( $wanted[ $form_id ] ) ) {
+				$referenced[ $form_id ] = true;
+			}
+		}
+
+		foreach ( (array) ( $block['innerBlocks'] ?? array() ) as $inner_block ) {
+			self::collect_saved_form_references( $inner_block, $wanted, $referenced );
+		}
+	}
+
+	/**
+	 * Collect saved form IDs from legacy Jetpack contact-form shortcodes.
+	 *
+	 * @param string          $content    Serialized post content.
+	 * @param array<int,bool> $wanted     Form IDs being displayed.
+	 * @param array<int,bool> $referenced Referenced form IDs.
+	 * @return void
+	 */
+	private static function collect_saved_form_shortcode_references( $content, $wanted, &$referenced ) {
+		$pattern = get_shortcode_regex( array( 'contact-form' ) );
+
+		if ( ! preg_match_all( '/' . $pattern . '/', $content, $matches, PREG_SET_ORDER ) ) {
+			return;
+		}
+
+		foreach ( $matches as $match ) {
+			$attributes = shortcode_parse_atts( $match[3] ?? '' );
+			$form_id    = absint( is_array( $attributes ) ? ( $attributes['ref'] ?? 0 ) : 0 );
+
+			if ( isset( $wanted[ $form_id ] ) ) {
+				$referenced[ $form_id ] = true;
+			}
+		}
 	}
 
 	/** Render optional EmailOctopus destination choices. */
