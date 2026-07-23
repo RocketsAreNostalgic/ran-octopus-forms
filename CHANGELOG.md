@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v2.1.0...v2.2.0) (2026-07-23)
+
+
+### Features
+
+* show saved form locations ([641196f](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/commit/641196fed9ca7f39e43321114d63cdccc6e113b8))
+
 ## [2.1.0](https://github.com/RocketsAreNostalgic/ran-emailoctopus-jetpack-forms/compare/v2.0.0...v2.1.0) (2026-07-20)
 
 
